@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "molens",
+  "compatibility_date": "2026-11-01",
+  // Statische site: alleen assets, geen Worker-code.
+  "assets": {
+    "directory": "./site"
+  }
+}

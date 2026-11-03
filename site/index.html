@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Molendatabase Zuid-Holland</title>
-<meta name="description" content="Alle rijksmonumentale molens in Zuid-Holland uit de RCE-data, met molenbiotoop per windrichting op basis van BAG en AHN.">
+<title>Molens</title>
+<meta name="description" content="Rijksmonumentale molens uit de RCE-data (eerste dataset: Zuid-Holland), met molenbiotoop per windrichting op basis van BAG en AHN.">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -12,11 +12,11 @@
 <header class="top">
   <div class="wrap">
     <p class="kicker">Eerste opzet · westelijk Nederland</p>
-    <h1>Molendatabase Zuid-Holland</h1>
-    <p class="lead">Alle <strong id="n-totaal">…</strong> rijksmonumentale molens in Zuid-Holland uit het register van de Rijksdienst voor het Cultureel Erfgoed, aangevuld met BAG en AHN. De <em>molenbiotoop</em> is berekend: hoeveel wind houden gebouwen en bomen binnen 400 m tegen, per windrichting.</p>
+    <h1>Molens</h1>
+    <p class="lead">De rijksmonumentale molens uit het register van de Rijksdienst voor het Cultureel Erfgoed, aangevuld met BAG en AHN. Eerste dataset: <strong id="n-totaal">…</strong> molens in Zuid-Holland. De <em>molenbiotoop</em> is berekend: hoeveel wind houden gebouwen en bomen binnen 400 m tegen, per windrichting.</p>
     <p class="downloads">
-      <a class="btn" href="molendatabase_zuid_holland.csv" download>CSV molendatabase</a>
-      <a class="btn ghost" href="stads_en_dorpsgezichten_zuid_holland.csv" download>CSV stads- en dorpsgezichten</a>
+      <a class="btn" href="molens.csv" download>Download alle molens (CSV)</a>
+      <a class="btn ghost" href="stads_en_dorpsgezichten.csv" download>CSV stads- en dorpsgezichten</a>
     </p>
   </div>
 </header>
@@ -25,6 +25,9 @@
   <section class="filters" aria-label="Filters">
     <label class="f f-zoek">Zoeken
       <input id="q" type="search" placeholder="Naam, plaats, straat, monumentnummer…">
+    </label>
+    <label class="f">Provincie
+      <select id="f-provincie"><option value="">Alle</option></select>
     </label>
     <label class="f">Gemeente
       <select id="f-gemeente"><option value="">Alle</option></select>
@@ -41,7 +44,14 @@
     <button id="reset" class="btn ghost" type="button">Wis filters</button>
   </section>
 
-  <p id="telling" class="telling" aria-live="polite"></p>
+  <div class="selbar">
+    <p id="telling" class="telling" aria-live="polite"></p>
+    <div class="selacties">
+      <button id="dl-sel" class="btn" type="button">Download selectie (CSV)</button>
+      <button id="wis-vink" class="btn ghost" type="button" hidden>Wis aangevinkte rijen</button>
+    </div>
+  </div>
+  <p class="note" id="sel-uitleg">De selectie is wat de filters tonen. Vink rijen in de lijst aan om alleen die te downloaden. Alle kolommen zitten altijd in de download.</p>
 
   <section class="split">
     <div class="mapcol">
@@ -64,7 +74,7 @@
     <div class="tablewrap">
       <table id="tabel">
         <thead><tr>
-          <th data-k="nr">Mon.nr.</th><th data-k="naam">Naam</th><th data-k="plaats">Plaats</th><th data-k="gemeente">Gemeente</th>
+          <th class="chkcol"><input type="checkbox" id="vink-alle" aria-label="Vink alle getoonde rijen aan"></th><th data-k="nr">Mon.nr.</th><th data-k="naam">Naam</th><th data-k="plaats">Plaats</th><th data-k="gemeente">Gemeente</th>
           <th data-k="jaar">Jaar bouw</th><th data-k="type">Type</th><th data-k="gezicht">Gezicht</th><th data-k="bio">Biotoop</th>
         </tr></thead>
         <tbody></tbody>
@@ -81,7 +91,7 @@
       </div>
       <div>
         <p>De score van een richting is het gemiddelde van de zwaarste hinder over negen stralen. <strong>Goed</strong> is minder dan 0,15, <strong>matig</strong> minder dan 0,45, anders <strong>slecht</strong>. De richting is waar de wind <em>vandaan</em> komt.</p>
-        <p class="note">Dit is een indicatie om molens onderling te vergelijken, geen vervanging van een molenbiotoopadvies. De askophoogte is geschat uit het hoogste punt van de romp (AHN, 2 m raster); de AHN toont de situatie van de laatste opname. Pas de drempels aan in <code>scripts/build_biotoop.py</code>.</p>
+        <p class="note">Dit is een indicatie om molens onderling te vergelijken, geen vervanging van een molenbiotoopadvies. De askophoogte is geschat: 90% van het hoogste punt volgens de AHN, met een ondergrens per type (stellingmolen 14 m, grondzeiler 9 m, wip- en standerdmolen 6 m, tjasker 3 m), omdat de AHN hoge dunne molenkoppen mist. De AHN toont de situatie van de laatste opname. Pas de drempels aan in <code>scripts/build_biotoop.py</code>.</p>
       </div>
     </div>
   </section>

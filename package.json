@@ -1,0 +1,15 @@
+{
+  "name": "molens",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Molens: rijksmonumentale molens uit de RCE-data, met molenbiotoop",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "deploy:dry": "wrangler deploy --dry-run",
+    "data": "python scripts/build_dataset.py"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
+}

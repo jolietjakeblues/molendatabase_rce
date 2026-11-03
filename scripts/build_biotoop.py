@@ -7,6 +7,8 @@ Methode (indicatief, bedoeld om molens onderling te vergelijken):
  - Rond elke molen wordt 400 m (de gangbare molenbiotoopstraal) een genormaliseerd hoogtemodel
    gemaakt: nDSM = AHN-DSM - AHN-DTM (2 m raster). Pixels binnen een BAG-pand zijn "gebouw",
    overige pixels hoger dan 2,5 m zijn "boom/begroeiing".
+ - Askophoogte = max(0,9 x hoogste punt volgens AHN, ondergrens per type: stellingmolen 14 m,
+   grondzeiler 9 m, wip-/standerdmolen 6 m, tjasker 3 m), want AHN mist hoge, dunne molenkoppen.
  - Per windrichting (sector van 45 graden, 9 stralen) kijken we van 12 tot 400 m afstand.
    Een obstakel met hoogte H op afstand d veroorzaakt windhinder volgens de bekende vuistregel
    (turbulentiezone: 2H hoog, circa 20H lang): hinder = 1 - d/(20 H) als de askophoogte lager is
@@ -17,6 +19,7 @@ Methode (indicatief, bedoeld om molens onderling te vergelijken):
 import io
 import json
 import math
+import re
 import sys
 import urllib.parse
 import urllib.request
@@ -50,7 +53,7 @@ def get(url, tries=4):
     last = None
     for t in range(tries):
         try:
-            with urllib.request.urlopen(url, timeout=40) as r:
+            with urllib.request.urlopen(url, timeout=100) as r:
                 return r.read()
         except Exception as e:  # noqa: BLE001
             last = e
@@ -110,7 +113,17 @@ def analyse(m):
     vals = ndsm[own & ~np.isnan(ndsm)]
     h_top = float(np.nanmax(vals)) if vals.size else 12.0
     h_top = max(h_top, 4.0)
-    h_as = 0.9 * h_top
+    # AHN onderschat hoge, dunne molenkoppen (De Walvisch: 24 m gemeten, 33 m werkelijk): ondergrens per type
+    txt = " ".join(o["tekst"] for o in m.get("omschrijvingen", [])).lower()
+    if "tjasker" in txt:
+        floor = 3.0
+    elif re.search(r"stelling", txt):
+        floor = 14.0
+    elif re.search(r"wip|standerd|paltrok|spinne?kop", txt):
+        floor = 6.0
+    else:
+        floor = 9.0
+    h_as = max(0.9 * h_top, floor)
     ndsm = np.nan_to_num(ndsm, nan=0.0)
     veg = (bld == 0) & (ndsm >= 2.5)
     obj = np.where(bld == 1, ndsm, np.where(veg, ndsm * 0.6, 0.0))  # bomen tellen voor 60%
@@ -145,7 +158,7 @@ def analyse(m):
         return round(float(mask[z].mean()), 3)
     return {
         "rijksmonumentnummer": nr, "x": x, "y": y,
-        "hoogte_molen_ahn": round(h_top, 1), "askop_hoogte_schatting": round(h_as, 1),
+        "hoogte_molen_ahn": round(h_top, 1), "askop_hoogte_schatting": round(h_as, 1), "askop_ondergrens": floor,
         "score": {d: round(s, 3) for d, s in scores.items()}, "klasse": cls, "dominant": det,
         "bebouwd_100m": dens(bld == 1, 100), "bebouwd_400m": dens(bld == 1, 400),
         "boomdek_100m": dens(veg, 100), "boomdek_400m": dens(veg, 400),

@@ -19,7 +19,7 @@
   ];
   var LAATSTE_TPL = "Molenbiotoop: NW";
 
-  var data, rows, filtered = [], map, layer, markers = {}, gezLayer, sortKey = "nr", sortDir = 1, selected = null;
+  var data, rows, filtered = [], map, layer, markers = {}, gezLayer, sortKey = "nr", sortDir = 1, selected = null, vink = {};
 
   function key(row, prefix) { for (var k in row) if (k.indexOf(prefix) === 0) return k; return null; }
   function val(row, prefix) { var k = key(row, prefix); return k ? row[k] : ""; }
@@ -35,7 +35,7 @@
   function prep(m) {
     var r = m.row;
     m._o = overall(m);
-    m._plaats = r["Plaats"]; m._gem = r["Gemeente"];
+    m._prov = r["Provincie"]; m._plaats = r["Plaats"]; m._gem = r["Gemeente"];
     m._type = val(r, "TYPE WINDMOLEN");
     m._gez = r["Binnen beschermd stads-/dorpsgezicht (Ja/Nee)"];
     m._jaar = parseInt(r["Jaar bouw"], 10) || null;
@@ -53,6 +53,7 @@
     data = d; rows = d.molens; rows.forEach(prep);
     document.getElementById("n-totaal").textContent = rows.length;
     document.getElementById("n2").textContent = rows.length;
+    fillSelect("f-provincie", rows.map(function (m) { return m._prov; }));
     fillSelect("f-gemeente", rows.map(function (m) { return m._gem; }));
     fillSelect("f-type", rows.map(function (m) { return m._type; }));
     initMap(); dekking(); bind(); apply();
@@ -74,18 +75,24 @@
   }
 
   function bind() {
-    ["q", "f-gemeente", "f-type", "f-gezicht", "f-bio"].forEach(function (id) {
+    ["q", "f-provincie", "f-gemeente", "f-type", "f-gezicht", "f-bio"].forEach(function (id) {
       document.getElementById(id).addEventListener("input", apply);
     });
     document.getElementById("reset").addEventListener("click", function () {
-      ["q", "f-gemeente", "f-type", "f-gezicht", "f-bio"].forEach(function (id) { document.getElementById(id).value = ""; });
+      ["q", "f-provincie", "f-gemeente", "f-type", "f-gezicht", "f-bio"].forEach(function (id) { document.getElementById(id).value = ""; });
       apply();
     });
     document.getElementById("toggle-gezichten").addEventListener("change", function (e) {
       if (!gezLayer) return;
       if (e.target.checked) gezLayer.addTo(map); else map.removeLayer(gezLayer);
     });
-    document.querySelectorAll("#tabel th").forEach(function (th) {
+    document.getElementById("dl-sel").addEventListener("click", downloadSelectie);
+    document.getElementById("wis-vink").addEventListener("click", function () { vink = {}; renderTable(); updateSel(); });
+    document.getElementById("vink-alle").addEventListener("change", function (e) {
+      filtered.forEach(function (m) { if (e.target.checked) vink[m.nr] = true; else delete vink[m.nr]; });
+      renderTable(); updateSel();
+    });
+    document.querySelectorAll("#tabel th[data-k]").forEach(function (th) {
       th.addEventListener("click", function () {
         var k = th.dataset.k; if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = 1; }
         renderTable();
@@ -95,14 +102,48 @@
 
   function apply() {
     var q = document.getElementById("q").value.trim().toLowerCase(),
-      g = document.getElementById("f-gemeente").value, t = document.getElementById("f-type").value,
+      p = document.getElementById("f-provincie").value, g = document.getElementById("f-gemeente").value, t = document.getElementById("f-type").value,
       z = document.getElementById("f-gezicht").value, b = document.getElementById("f-bio").value;
     filtered = rows.filter(function (m) {
-      return (!q || m._zoek.indexOf(q) >= 0) && (!g || m._gem === g) && (!t || m._type === t) &&
+      return (!q || m._zoek.indexOf(q) >= 0) && (!p || m._prov === p) && (!g || m._gem === g) && (!t || m._type === t) &&
         (!z || m._gez === z) && (!b || m._o.klasse === b);
     });
     document.getElementById("telling").textContent = filtered.length + " van " + rows.length + " molens";
-    renderMap(); renderTable();
+    renderMap(); renderTable(); updateSel();
+  }
+
+  function selectie() {
+    var n = Object.keys(vink).length;
+    return n ? rows.filter(function (m) { return vink[m.nr]; }) : filtered;
+  }
+
+  function updateSel() {
+    var n = Object.keys(vink).length, sel = selectie();
+    document.getElementById("dl-sel").textContent = "Download selectie (" + sel.length + (sel.length === 1 ? " rij" : " rijen") + ", CSV)";
+    document.getElementById("dl-sel").disabled = !sel.length;
+    document.getElementById("wis-vink").hidden = !n;
+    document.getElementById("wis-vink").textContent = "Wis " + n + " aangevinkte " + (n === 1 ? "rij" : "rijen");
+    document.getElementById("sel-uitleg").textContent = n
+      ? "Je downloadt de " + n + " aangevinkte rijen. Alle kolommen zitten altijd in de download."
+      : "De selectie is wat de filters tonen. Vink rijen in de lijst aan om alleen die te downloaden. Alle kolommen zitten altijd in de download.";
+    var all = document.getElementById("vink-alle");
+    all.checked = filtered.length > 0 && filtered.every(function (m) { return vink[m.nr]; });
+  }
+
+  function csvCel(v) {
+    v = v == null ? "" : String(v);
+    return /[;"\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  }
+
+  function downloadSelectie() {
+    var sel = selectie(), cols = data.kolommen;
+    if (!sel.length) return;
+    var regels = [cols.map(csvCel).join(";")].concat(sel.map(function (m) { return cols.map(function (c) { return csvCel(m.row[c]); }).join(";"); }));
+    var blob = new Blob(["﻿" + regels.join("\r\n") + "\r\n"], { type: "text/csv;charset=utf-8" });
+    var a = document.createElement("a"), d = new Date().toISOString().slice(0, 10);
+    a.href = URL.createObjectURL(blob); a.download = "molens-selectie-" + d + ".csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
   }
 
   function renderMap() {
@@ -114,6 +155,7 @@
       mk.on("click", function () { select(m, false); });
       mk.addTo(layer); markers[m.nr] = mk;
     });
+    map.invalidateSize();
     if (filtered.length && filtered.length < rows.length) {
       map.fitBounds(L.latLngBounds(filtered.map(function (m) { return [m.lat, m.lon]; })).pad(0.2), { maxZoom: 14 });
     } else if (filtered.length === rows.length) {
@@ -129,11 +171,15 @@
     var list = filtered.slice().sort(function (a, b) { var x = f(a), y = f(b); return (x < y ? -1 : x > y ? 1 : 0) * sortDir; });
     var tb = document.querySelector("#tabel tbody");
     tb.innerHTML = list.map(function (m) {
-      return '<tr data-nr="' + m.nr + '"' + (selected === m.nr ? ' class="sel"' : "") + "><td>" + m.nr + "</td><td>" + esc(m.naam) + "</td><td>" + esc(m._plaats) + "</td><td>" + esc(m._gem) +
+      return '<tr data-nr="' + m.nr + '"' + (selected === m.nr ? ' class="sel"' : "") + '><td class="chk"><input type="checkbox" class="vink" aria-label="Selecteer ' + esc(m.naam) + '"' + (vink[m.nr] ? " checked" : "") + "></td><td>" + m.nr + "</td><td>" + esc(m.naam) + "</td><td>" + esc(m._plaats) + "</td><td>" + esc(m._gem) +
         "</td><td>" + (m._jaar || "") + "</td><td>" + esc(m._type) + "</td><td>" + esc(m._gez) + "</td><td>" +
         (m._o.klasse ? '<span class="tag ' + m._o.klasse + '">' + m._o.klasse + "</span>" : "") + "</td></tr>";
     }).join("");
     tb.querySelectorAll("tr").forEach(function (tr) {
+      var cb = tr.querySelector(".vink");
+      cb.addEventListener("click", function (e) { e.stopPropagation(); });
+      cb.addEventListener("change", function () { if (cb.checked) vink[tr.dataset.nr] = true; else delete vink[tr.dataset.nr]; tr.classList.toggle("vink", cb.checked); updateSel(); });
+      tr.classList.toggle("vink", !!vink[tr.dataset.nr]);
       tr.addEventListener("click", function () {
         var m = rows.find(function (x) { return x.nr === tr.dataset.nr; }); select(m, true);
       });
@@ -181,8 +227,13 @@
       kv("Beschermd gezicht", r["Binnen beschermd stads-/dorpsgezicht (Ja/Nee)"] === "Ja" ? r["Beschermd gezicht"] + " (" + r["Soort gezicht"] + ")" :
         (r["Afstand tot dichtstbijzijnd beschermd gezicht (m)"] !== "" ? "Nee, dichtstbij op " + r["Afstand tot dichtstbijzijnd beschermd gezicht (m)"] + " m" : "Nee")) +
       kv("Adres", r["Herkomst adres"]) + "</dl>";
+    if (m.afbeeldingen && m.afbeeldingen.length) {
+      html += '<strong>Afbeeldingen RCE</strong><div class="galerij">' + m.afbeeldingen.slice(0, 6).map(function (i) {
+        return '<figure><a href="' + esc(i.pagina || i.commons || i.thumb) + '" target="_blank" rel="noopener"><img loading="lazy" src="' + esc(i.thumb) + '" alt="' + esc(i.titel) + '"></a><figcaption>' + esc(i.titel) + '<br>Foto: RCE · <a href="' + esc(i.licentie) + '" target="_blank" rel="noopener">CC BY 4.0</a></figcaption></figure>';
+      }).join("") + "</div>" + (m.afbeeldingen.length > 6 ? '<p class="note">Nog ' + (m.afbeeldingen.length - 6) + ' afbeeldingen in de <a href="' + esc(m.afbeeldingen[0].pagina || "https://beeldbank.cultureelerfgoed.nl") + '" target="_blank" rel="noopener">RCE-beeldbank</a>.</p>' : "");
+    }
     if (r["Omschrijving RCE"]) html += '<p class="omschr">' + esc(r["Omschrijving RCE"]) + "</p>";
-    html += '<p class="links"><a href="' + esc(r["Monumentenregister"]) + '" target="_blank" rel="noopener">Monumentenregister</a><a href="' + esc(r["Linked data RCE"]) + '" target="_blank" rel="noopener">Linked data RCE</a></p>';
+    html += '<p class="links"><a href="' + esc(r["Monumentenregister"]) + '" target="_blank" rel="noopener">Monumentenregister</a><a href="' + esc(r["Linked data RCE"]) + '" target="_blank" rel="noopener">Linked data RCE</a>' + (r["Zoeklink Nederlandse Molendatabase"] ? '<a href="' + esc(r["Zoeklink Nederlandse Molendatabase"]) + '" target="_blank" rel="noopener">Zoeken in Nederlandse Molendatabase</a>' : "") + "</p>";
     document.getElementById("detail").innerHTML = html;
     if (markers[m.nr]) markers[m.nr].openTooltip();
   }

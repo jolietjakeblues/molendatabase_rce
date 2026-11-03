@@ -65,3 +65,14 @@ tbody tr{cursor:pointer}tbody tr:hover,tbody tr.sel{background:color-mix(in srgb
 code{background:color-mix(in srgb,var(--ink) 8%,transparent);padding:0 4px;border-radius:3px;font-size:.85em}
 .foot{margin-top:40px;padding:18px 0 30px;border-top:1px solid var(--line);color:var(--muted);font-size:.84rem}
 .leaflet-popup-content{font:14px/1.4 "Segoe UI",system-ui,sans-serif}
+.galerij{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin:8px 0 12px}
+.galerij figure{margin:0;font-size:.72rem;color:var(--muted);line-height:1.3}
+.galerij img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;display:block;background:var(--line)}
+.galerij figcaption{margin-top:3px;overflow-wrap:anywhere}
+.galerij a,.detail a,.note a{color:var(--accent)}
+.selbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:6px 0 4px}
+.selbar .telling{margin:0}
+.selacties{display:flex;gap:8px;flex-wrap:wrap}
+.chkcol{width:32px;cursor:default}
+td.chk{width:32px}
+tbody tr.vink{background:color-mix(in srgb,var(--accent) 8%,transparent)}

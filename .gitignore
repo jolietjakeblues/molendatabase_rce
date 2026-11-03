@@ -1,2 +1,6 @@
 /.claude
 /Eerste_opzet_molendatabase_westelijk_Nederland.xlsx
+node_modules/
+.wrangler/
+data/cache/
+data/*.log

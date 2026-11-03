@@ -1,0 +1,10 @@
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+/data/*
+  Cache-Control: public, max-age=3600
+
+/*.csv
+  Content-Type: text/csv; charset=utf-8
+  Cache-Control: public, max-age=3600

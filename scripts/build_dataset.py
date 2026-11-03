@@ -18,6 +18,8 @@ from shapely.ops import transform as shp_transform
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW = json.loads((ROOT / "data" / "rce_raw.json").read_text(encoding="utf-8"))
+IMG_F = ROOT / "data" / "rce_images.json"
+IMG = json.loads(IMG_F.read_text(encoding="utf-8")) if IMG_F.exists() else {}
 BIO_F = ROOT / "data" / "biotoop.json"
 BIO = {b["rijksmonumentnummer"]: b for b in json.loads(BIO_F.read_text(encoding="utf-8"))} if BIO_F.exists() else {}
 CACHE = ROOT / "data" / "cache"
@@ -119,6 +121,13 @@ def bestemming(t):
         return "geen functie"
     m = re.search(r"functie als ([^.;]{3,50})", t, re.I)
     return m.group(1).strip() if m else ""
+
+
+def md_link(naam, plaats):
+    """Alleen een zoeklink naar molendatabase.nl (links zijn toegestaan); er worden geen gegevens van die site overgenomen."""
+    term = re.sub(r"^(de|het|'t)\s+", "", naam or "", flags=re.I).strip() or plaats
+    return ("https://www.molendatabase.nl/molens?mill_search%5Bterm%5D=" + urllib.parse.quote(term)
+            + "&mill_search%5Bstate%5D=existing") if term else ""
 
 
 def gemeente_naam(uri):
@@ -307,15 +316,21 @@ for m in sorted(RAW["molens"], key=lambda m: int(m["rijksmonumentnummer"])):
         "Hoogste obstakel binnen 400 m (m)": b.get("hoogste_obstakel_400m", ""),
         "Herkomst jaar bouw": jb_bron, "Herkomst naam": naam_bron, "Herkomst adres": "; ".join(herkomst),
         "Breedtegraad": round(lat, 6), "Lengtegraad": round(lon, 6), "RD x": round(pt.x), "RD y": round(pt.y),
+        "Aantal RCE-afbeeldingen": len(IMG.get(nr, [])),
+        "RCE-afbeelding (miniatuur)": IMG[nr][0]["thumb"] if IMG.get(nr) else "",
+        "RCE-beeldbankpagina": IMG[nr][0]["pagina"] if IMG.get(nr) else "",
+        "Licentie afbeelding": IMG[nr][0]["licentie"] if IMG.get(nr) else "",
+        "Zoeklink Nederlandse Molendatabase": md_link(naam, plaats),
         "Monumentenregister": f"https://monumentenregister.cultureelerfgoed.nl/monumenten/{nr}",
         "Linked data RCE": m["uri"],
     })
     rows.append(rd_row)
     js.append({"nr": nr, "naam": rd_row["Naam"], "lat": round(lat, 6), "lon": round(lon, 6), "row": rd_row,
+               "afbeeldingen": [{k: v for k, v in i.items() if k != "open_licentie"} for i in IMG.get(nr, []) if i["open_licentie"] and i["thumb"]],
                "biotoop": {"score": b.get("score"), "dominant": b.get("dominant"), "klasse": kl}})
 
 cols = list(rows[0].keys())
-with open(ROOT / "molendatabase_zuid_holland.csv", "w", newline="", encoding="utf-8-sig") as f:
+with open(ROOT / "site" / "molens.csv", "w", newline="", encoding="utf-8-sig") as f:
     w = csv.DictWriter(f, fieldnames=cols, delimiter=";")
     w.writeheader()
     w.writerows(rows)
@@ -333,7 +348,7 @@ for z in sorted(GEZ, key=lambda z: (z["gemeente"], z["naam"])):
         gz_rows.append({**base, "MN": r["Monumentnummer"], "Molennaam": r["Naam"],
                         "adres": f'{r["Straat"]} {r["Huisnr."]}, {r["Postcode"]} {r["Plaats"]}'.strip(", "),
                         "Binnen beschermde stads_ en dorpsgezichten(Ja/Nee)": "Ja"})
-with open(ROOT / "stads_en_dorpsgezichten_zuid_holland.csv", "w", newline="", encoding="utf-8-sig") as f:
+with open(ROOT / "site" / "stads_en_dorpsgezichten.csv", "w", newline="", encoding="utf-8-sig") as f:
     w = csv.DictWriter(f, fieldnames=list(gz_rows[0].keys()), delimiter=";")
     w.writeheader()
     w.writerows(gz_rows)
@@ -353,6 +368,3 @@ for c in ("Naam", "Jaar bouw", "Jaar herbouw", "Brand jaar", "Laatste restaurati
     n = sum(1 for r in rows if r[c] not in ("", "Naamloos"))
     print(f"  gevuld {n:3d}/{len(rows)}  {c[:40]}")
 
-import shutil
-for f in ("molendatabase_zuid_holland.csv", "stads_en_dorpsgezichten_zuid_holland.csv"):
-    shutil.copy(ROOT / f, ROOT / "site" / f)
