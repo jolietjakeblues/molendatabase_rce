@@ -4,3 +4,4 @@ node_modules/
 .wrangler/
 data/cache/
 data/*.log
+molens-selectie-2026-11-03.csv

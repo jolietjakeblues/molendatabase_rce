@@ -2,7 +2,7 @@
   "use strict";
   var DIRS = ["N", "NO", "O", "ZO", "Z", "ZW", "W", "NW"];
   var DIRNAAM = { N: "noord", NO: "noordoost", O: "oost", ZO: "zuidoost", Z: "zuid", ZW: "zuidwest", W: "west", NW: "noordwest" };
-  var KLEUR = { Goed: "#2b8a57", Matig: "#d19a1f", Slecht: "#c0392b", "": "#9aa3a6" };
+  var KLEUR = { Goed: "#39870C", Matig: "#E17000", Slecht: "#D52B1E", "": "#94A3B8" };
   var BRON = [
     ["Monumentnummer", "RCE monumentenregister"], ["Naam", "RCE naam of quote uit omschrijving"],
     ["Jaar bouw", "RCE datering, omschrijving of BAG-bouwjaar"], ["Jaar herbouw", "Omschrijving (tekstherkenning)"],
