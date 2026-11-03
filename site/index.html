@@ -39,10 +39,16 @@
     <label class="f">Type windmolen
       <select id="f-type"><option value="">Alle</option></select>
     </label>
+    <label class="f">Formele zone (plan)
+      <select id="f-zone"><option value="">Alle</option><option value="Ja">Ja</option><option value="Nee">Nee</option><option value="Onbekend">Onbekend</option></select>
+    </label>
+    <label class="f">Normtoets (hoogte)
+      <select id="f-norm"><option value="">Alle</option><option>Voldoet</option><option>Afhankelijk van wiekhoogte</option><option>Overschrijding</option><option>Niet getoetst</option></select>
+    </label>
     <label class="f">Beschermd gezicht
       <select id="f-gezicht"><option value="">Alle</option><option value="Ja">Binnen gezicht</option><option value="Nee">Buiten gezicht</option></select>
     </label>
-    <label class="f">Molenbiotoop (gemiddeld)
+    <label class="f">Molenbiotoop (gekozen weging)
       <select id="f-bio"><option value="">Alle</option><option>Goed</option><option>Matig</option><option>Slecht</option></select>
     </label>
     <button id="reset" class="btn ghost" type="button">Wis filters</button>
@@ -66,6 +72,10 @@
         <span><i class="dot slecht"></i> slecht</span>
         <span><i class="dot geen"></i> nog niet berekend</span>
         <span><i class="dot rel"></i> molengerelateerd monument</span>
+        <span class="modus">Kleur op:
+          <label><input type="radio" name="modus" value="wind" checked> windgewogen</label>
+          <label><input type="radio" name="modus" value="gem"> gemiddelde</label>
+        </span>
         <label class="chk"><input id="toggle-gezichten" type="checkbox" checked> Beschermde stads- en dorpsgezichten</label>
       </div>
     </div>
@@ -80,7 +90,7 @@
       <table id="tabel">
         <thead><tr>
           <th class="chkcol"><input type="checkbox" id="vink-alle" aria-label="Vink alle getoonde rijen aan"></th><th data-k="nr">Mon.nr.</th><th data-k="naam">Naam</th><th data-k="plaats">Plaats</th><th data-k="gemeente">Gemeente</th>
-          <th data-k="jaar">Jaar bouw</th><th data-k="type">Type</th><th data-k="gezicht">Gezicht</th><th data-k="bio">Biotoop</th>
+          <th data-k="jaar">Jaar bouw</th><th data-k="type">Type</th><th data-k="gezicht">Gezicht</th><th data-k="zone">Zone</th><th data-k="bio">Biotoop</th>
         </tr></thead>
         <tbody></tbody>
       </table>
@@ -99,6 +109,16 @@
         <p class="note">Dit is een indicatie om molens onderling te vergelijken, geen vervanging van een molenbiotoopadvies. De askophoogte is geschat: 90% van het hoogste punt volgens de AHN, met een ondergrens per type (stellingmolen 14 m, grondzeiler 9 m, wip- en standerdmolen 6 m, tjasker 3 m), omdat de AHN hoge dunne molenkoppen mist. De AHN toont de situatie van de laatste opname. Pas de drempels aan in <code>scripts/build_biotoop.py</code>.</p>
       </div>
     </div>
+  </section>
+
+  <section class="uitleg">
+    <h2>Windgewogen biotoop</h2>
+    <p>De hinderscore per richting is gewogen met de lokale windroos uit KNMI-uurgegevens (klimaatnormaal 1991–2020): de drie dichtstbijzijnde stations, gewogen op 1/afstand². Standaard weegt het <strong>aandeel windenergie</strong> (som van v³ per richting): zuidwest levert in Zuid-Holland ongeveer 35–40% van de windenergie, noordoost 3–5%. Een obstakel in het zuidwesten telt dus veel zwaarder dan in het noordoosten. De gele staven in de windroos tonen dat aandeel; met de schakelaar bij de kaart kies je tussen windgewogen en het gewone gemiddelde. De stations staan 20–30 km van de molens en meten op 10 m hoogte, dus het blijft een benadering.</p>
+  </section>
+
+  <section class="uitleg">
+    <h2>Formele molenbiotoopzone</h2>
+    <p>Uit de bestemmingsplannen (PDOK Ruimtelijke Plannen) is per molen opgehaald of er een vigerende <strong>vrijwaringszone - molenbiotoop</strong> geldt, met straal, plan, status, datum en een link naar de plantekst. De zone staat op de kaart als blauw gestippeld vlak. Omgevingsplannen onder de Omgevingswet staan niet in deze bron; daar staat dan "Onbekend" of "Nee". De vergelijking met de berekende biotoop is een indicatie: er is gekeken naar gebouwen en hoge objecten (≥ 3 m) in de zone, niet naar de regels uit de plantekst.</p>
   </section>
 
   <section class="uitleg">

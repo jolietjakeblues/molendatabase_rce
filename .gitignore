@@ -5,3 +5,5 @@ node_modules/
 data/cache/
 data/*.log
 molens-selectie-2026-11-03.csv
+.env
+.env.*

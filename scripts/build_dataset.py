@@ -20,6 +20,15 @@ ROOT = Path(__file__).resolve().parent.parent
 RAW = json.loads((ROOT / "data" / "rce_raw.json").read_text(encoding="utf-8"))
 IMG_F = ROOT / "data" / "rce_images.json"
 IMG = json.loads(IMG_F.read_text(encoding="utf-8")) if IMG_F.exists() else {}
+def _laad(naam):
+    f = ROOT / "data" / naam
+    return json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
+
+
+ZONES = _laad("zones.json")
+WIND = _laad("wind.json")
+NORM = _laad("norm.json")
+KNMI = _laad("knmi_windroos.json")
 ERF_F = ROOT / "data" / "erf.json"
 ERFD = {r["rijksmonumentnummer"]: r for r in json.loads(ERF_F.read_text(encoding="utf-8"))} if ERF_F.exists() else {}
 BIO_F = ROOT / "data" / "biotoop.json"
@@ -133,6 +142,37 @@ def erf_tekst(e):
     bj = f', bouwjaar {d["bouwjaar"]}' if d.get("bouwjaar") and d["bouwjaar"] != 9999 else ""
     rm = f', rijksmonument {d["rijksmonument"]["nr"]}' if d.get("rijksmonument") else ""
     return f'{d["afstand"]} m, {d["relatie"]}, {d["gebruik"]}{bj}{rm}'
+
+
+PTX_F = ROOT / "site" / "data" / "plantekst.json"
+PTX = json.loads(PTX_F.read_text(encoding="utf-8")) if PTX_F.exists() else {}
+
+
+def norm_tekst(zones):
+    """Wat uit de regeltekst van de zone is herkend: referentie, afstanden, helling. Leeg als er niets herkend is."""
+    delen = []
+    for q in zones or []:
+        n = q.get("norm") or {}
+        t = []
+        if n.get("referentie"):
+            t.append("referentie: " + n["referentie"])
+        if n.get("afstanden_m"):
+            t.append("afstanden (m): " + ", ".join(str(a) + (f"-{b}" if b else "") for a, b in n["afstanden_m"]))
+        if n.get("helling"):
+            t.append("helling: " + n["helling"])
+        if n.get("beplanting_genoemd"):
+            t.append("ook beplanting genoemd")
+        if t:
+            delen.append("; ".join(t))
+    return " | ".join(dict.fromkeys(delen))
+
+
+def regel_uittreksel(zones, n=500):
+    for q in zones or []:
+        h = q.get("regels_href")
+        if h and h in PTX:
+            return PTX[h]["tekst"][:n]
+    return ""
 
 
 def md_link(naam, plaats):
@@ -277,6 +317,9 @@ for m in sorted(RAW["molens"], key=lambda m: int(m["rijksmonumentnummer"])):
     kl = b.get("klasse", {})
     cat = m.get("categorie", "Molen")
     e = ERFD.get(nr, {})
+    zn = ZONES.get(nr, {}) if cat == "Molen" else {}
+    wd = WIND.get(nr, {}) if cat == "Molen" else {}
+    nt = NORM.get(nr, {}) if cat == "Molen" else {}
     if e.get("fout"):
         e = {}
     rd_row = {
@@ -341,6 +384,43 @@ for m in sorted(RAW["molens"], key=lambda m: int(m["rijksmonumentnummer"])):
         "Bijgebouwen op erf (BAG: zonder woonfunctie, zelfde perceel of tegenaan)": e.get("bijgebouwen_op_erf", ""),
         "Dichtstbijzijnde gebouw (BAG)": erf_tekst(e),
         "Gerelateerde rijksmonumenten bij de molen": "; ".join(f'{g["functies"][0]} {g["rijksmonumentnummer"]} ({g["relatie"]})' for g in e.get("gerelateerd", [])),
+        "Windgewogen molenbiotoop (energie)": wd.get("klasse_energie", ""),
+        "Windgewogen index (energie, 0 goed - 1 slecht)": wd.get("index_energie", ""),
+        "Windgewogen molenbiotoop (frequentie)": wd.get("klasse_freq", ""),
+        "Gemiddelde molenbiotoop (zonder weging)": wd.get("klasse_gemiddeld", ""),
+        "Overheersende windrichting (energie)": wd.get("overheersend_energie", ""),
+        **{f"Windenergie-aandeel {d} (%)": (round(100 * wd["energie"][i], 1) if wd else "") for i, d in enumerate(("N", "NO", "O", "ZO", "Z", "ZW", "W", "NW"))},
+        "Windroos: KNMI-stations (gewicht) en periode": ("; ".join(f'{q["naam"]} ({round(100 * q["gewicht"])}%)' for q in wd["stations"]) + f' | {wd["periode"]}') if wd else "",
+        "Formele molenbiotoopzone (bestemmingsplan)": zn.get("status", ""),
+        "Zone: naam": zn.get("zone_naam", ""),
+        "Zone: straal (m)": zn.get("straal_m", ""),
+        "Zone: straal bepaald uit": zn.get("straal_bron", ""),
+        "Zone: gevonden op": zn.get("gevonden_op", "") if zn.get("status") == "Ja" else "",
+        "Zone: plan (dossier)": zn.get("plan_dossier", ""),
+        "Zone: planstatus": zn.get("planstatus", ""),
+        "Zone: plandatum": zn.get("plandatum", ""),
+        "Zone: plantekst (URL)": zn.get("plantekst", ""),
+        "Zone: norm uit plantekst (herkend)": norm_tekst(zn.get("zones")),
+        "Zone: regeltekst (uittreksel)": regel_uittreksel(zn.get("zones")),
+        "Zone: dekking cirkel 100 m (%)": round(100 * zn["dekking_100m"]) if "dekking_100m" in zn else "",
+        "Zone: dekking cirkel 400 m (%)": round(100 * zn["dekking_400m"]) if "dekking_400m" in zn else "",
+        "Zone: gebouwen binnen zone (aantal, BAG)": zn.get("gebouwen_in_zone", ""),
+        "Zone: gebouwen gebouwd na plandatum (aantal)": zn.get("gebouwen_jonger_dan_plan", ""),
+        "Zone: aandeel zone met objecten >= 3 m (%)": round(100 * zn["hoge_objecten_aandeel"]) if zn.get("hoge_objecten_aandeel") is not None else "",
+        "Zone: hoogste obstakel in zone (m)": zn.get("hoogste_obstakel_m", "") if zn.get("hoogste_obstakel_m") is not None else "",
+        "Zone: molenaanduiding in plan": "; ".join(dict.fromkeys(a["naam"] for a in zn.get("molenaanduidingen", []))),
+        "Zone: vergelijking met berekende biotoop": zn.get("vergelijking", ""),
+        "Normtoets (hoogte volgens bestemmingsplan)": nt.get("uitkomst", ""),
+        "Normtoets: toegepaste norm": " | ".join(dict.fromkeys(
+            f'binnen {q["straal_a"]} m niet hoger dan de onderste wiekpunt' + (f'; {q["straal_a"]}-{q["tot"]} m: + afstand x {q["helling"]}' if q.get("helling") else "") + ("; ook beplanting" if q.get("beplanting") else "")
+            for q in nt.get("norm", []))) if nt.get("norm") else nt.get("reden", ""),
+        "Normtoets: aangenomen onderste wiekpunt (m)": (f'{nt["aanname"]["h_wiek_m"]} (bereik {nt["aanname"]["bereik_m"][0]}-{nt["aanname"]["bereik_m"][1]}; {nt["aanname"]["bron"]})') if nt.get("aanname") else "",
+        "Normtoets: gebouwen boven de norm (streng / midden / ruim)": (" / ".join(str(nt["gebouwen_boven_norm"][k]) for k in ("streng", "midden", "ruim"))) if nt.get("gebouwen_boven_norm") else "",
+        "Normtoets: waarvan gebouwd na plandatum (midden)": nt.get("waarvan_na_plandatum", ""),
+        "Normtoets: hoogste overschrijding (m, midden)": nt.get("hoogste_overschrijding_m", ""),
+        "Normtoets: bomen boven de norm (m2, midden; indicatief)": (nt["bomen_boven_norm_m2"]["midden"] if nt.get("bomen_boven_norm_m2") else ""),
+        "Herkomst normtoets": ("AHN (huidige versie) + BAG-voetafdrukken + regeltekst API Ruimtelijke Plannen; wiekhoogte is een aanname" if nt.get("norm") else ""),
+        "Herkomst zone en wind": ((f"zone: PDOK Ruimtelijke Plannen WMS, opgehaald {zn['opgehaald']}" if zn.get("opgehaald") else "") + (f"; wind: KNMI uurgegevens, opgehaald {KNMI['opgehaald']}" if wd and KNMI else "")).strip("; "),
         "Herkomst jaar bouw": jb_bron, "Herkomst naam": naam_bron, "Herkomst adres": "; ".join(herkomst),
         "Breedtegraad": round(lat, 6), "Lengtegraad": round(lon, 6), "RD x": round(pt.x), "RD y": round(pt.y),
         "Aantal RCE-afbeeldingen": len(IMG.get(nr, [])),
@@ -359,6 +439,9 @@ for m in sorted(RAW["molens"], key=lambda m: int(m["rijksmonumentnummer"])):
                 rd_row[k] = ""
     rows.append(rd_row)
     js.append({"nr": nr, "categorie": cat, "erf": ({k: e[k] for k in ("molenpercelen", "molenperceel_m2", "tel", "woning_op_erf", "bijgebouwen_op_erf", "dichtstbij", "gerelateerd")} if e else None),
+               "wind": ({k: wd[k] for k in ("periode", "stations", "freq", "energie", "index_energie", "klasse_energie", "index_freq", "klasse_freq", "index_gemiddeld", "klasse_gemiddeld", "overheersend_energie", "bijdrage_energie")} if wd else None),
+               "zone": ({k: v for k, v in zn.items() if k not in ("plannen",)} if zn else None),
+               "norm": nt or None,
                "naam": rd_row["Naam"], "lat": round(lat, 6), "lon": round(lon, 6), "row": rd_row,
                "afbeeldingen": [{k: v for k, v in i.items() if k != "open_licentie"} for i in IMG.get(nr, []) if i["open_licentie"] and i["thumb"]],
                "biotoop": {"score": b.get("score"), "dominant": b.get("dominant"), "klasse": kl}})

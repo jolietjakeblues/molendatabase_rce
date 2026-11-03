@@ -32,12 +32,38 @@ CSV-kolommen: *Kadastraal perceel molen*, *Perceelgrootte*, de vier tellingen, *
 
 Beperking: RCE en BAG wijzen soms naar verschillende panden (bijvoorbeeld wanneer molen en molenaarswoning één adres delen); een kleine woning zonder verblijfsobject telt dan als bijgebouw.
 
+## Windgewogen biotoop
+`scripts/fetch_knmi.py` haalt KNMI-uurgegevens (windrichting en uurgemiddelde snelheid, open data) op voor acht stations in en rond Zuid-Holland en bewaart per station en periode (1991-2020 en 2014-2023) de windroos: frequentie en energieaandeel (som van v³) per richting. `scripts/build_wind.py` kiest per molen de drie dichtstbijzijnde stations (alleen stations met minstens 80% geldige uren in de periode, dus Voorschoten valt af voor 1991-2020), weegt ze op 1/afstand² en berekent de windgewogen index: som over de richtingen van gewicht × hinderscore, met dezelfde klassegrenzen als het gemiddelde. Standaard weegt het energieaandeel; de frequentieweging en het ongewogen gemiddelde staan er ook. In Zuid-Holland is zuidwest overal de overheersende richting (ongeveer 35-40% van de windenergie).
+
+Beperkingen: stations staan 20-30 km van de molen en meten op 10 m; de periode (`PERIODE` in `build_wind.py`) en het aantal stations zijn instelbaar. De windweging verandert de klasse van 19 molens.
+
+## Formele molenbiotoopzone
+`scripts/fetch_plannen.py` bevraagt de PDOK Ruimtelijke Plannen WMS (GetFeatureInfo) per molen op de lagen gebiedsaanduiding, dubbelbestemming, functieaanduiding, bouwaanduiding en enkelbestemming. `scripts/build_zones.py` houdt vigerende aanduidingen over (niet historisch, geen ontwerp) en scheidt **biotoopzones** (naam met "biotoop") van **molenaanduidingen** ("molen", "overig - molen", ...). Per molen: zone ja, nee of onbekend, straal (uit de naam, anders geschat uit het polygoon en alleen als die ≤ 450 m is), plan, status, datum, plantekst-URL, dekking van de cirkels van 100 en 400 m, gebouwen in de zone (BAG) en hoge objecten (≥ 3 m, AHN). De vergelijking met de berekende biotoop is een indicatie; de regels uit de plantekst (zoals maximale bouwhoogte) zijn niet gelezen.
+
+Uitkomst: 212 molens hebben een biotoopzone, 21 niet (wel een bestemmingsplan) en 4 zijn onbekend (geen bestemmingsplan in de bron). Bij 15 molens is de zone niet op het molenpunt gevonden maar op 60 of 150 m (staat in *Zone: gevonden op*).
+
+### Regelteksten (API Ruimtelijke Plannen)
+`scripts/fetch_plantekst.py` haalt met de API Ruimtelijke Plannen (v4, Ruimtelijkeplannen.nl) per zone het artikel met de regels op: de WMS-`identificatie` is het ID van het gebiedsaanduiding-object, dat linkt naar het artikel; onderliggende artikelen worden meegelezen. Uit de tekst worden afstanden, de hoogtehelling en de referentie (onderste punt van de wiek) herkend. Voor 226 zones is een artikel gevonden; bij 191 van de 212 molens met zone is de norm herkend. De regels verschillen per gemeente: binnen 100 m geen bebouwing hoger dan de onderste wiekpunt, en tussen 100 en 400 m een toegestane hoogte van 1/30, 1/50 of 1/100 van de afstand (tot de molen), vaak ook voor beplanting. De site toont de volledige tekst per zone onder *Regels uit het plan*; de CSV heeft *Zone: norm uit plantekst (herkend)* en een uittreksel. Herkenning is tekstmatig en kan een afwijkende formulering missen; de plantekst zelf blijft leidend.
+
+De sleutel staat in `.env` (zie `.env.example`; `.env` staat in `.gitignore`) of in de omgevingsvariabele `RUIMTELIJKE_PLANNEN_API_KEY`. Het script schrijft de sleutel nooit weg.
+
+### Normtoets (hoogte volgens het bestemmingsplan)
+`scripts/build_norm.py` toetst per molen met een zone en een volledig herkende norm (166 molens) of gebouwen en bomen in de zone aan de norm voldoen: binnen de straal (meestal 100 m) niet hoger dan de onderste wiekpunt, daarbuiten tot 400 m maximaal `h_wiek + afstand × helling` (1/30, 1/50 of 1/100; helling en afstanden uit de plantekst). De hoogtes komen uit de AHN (DSM min DTM, 2 m raster); gebouwen zijn BAG-voetafdrukken, een gebouw telt als overschrijdend bij minstens 2 pixels en 25% van de oppervlakte boven de grens. Bomen (alleen als het plan beplanting noemt) worden als oppervlak in m² gerapporteerd en zijn indicatief.
+
+**De onderste wiekpunt is een aanname**, want die staat niet in de data: grondzeiler, poldermolen en wipmolen 2,5 m (± 1,5 m), beltmolen 5,5 m (± 1,5 m), stellingmolen 8 m (± 2,5 m). Er wordt getoetst met de strenge, midden- en ruime aanname. Uitkomst: *Voldoet* (ook bij de strenge aanname), *Overschrijding* (ook bij de ruime aanname) of *Afhankelijk van wiekhoogte*. Uitkomst voor Zuid-Holland: 20 voldoen, 79 overschrijden, 67 hangen af van de aanname, 46 zijn niet getoetst (norm niet automatisch herkend of alleen een straal zonder helling die ik niet kon uitlezen).
+
+Lees de uitkomst voorzichtig: de norm geldt voor het **oprichten** van bouwwerken, en bestaande bebouwing mag er vaak overheen. Daarom staat apart hoeveel overschrijdende gebouwen na de plandatum zijn gebouwd (BAG-bouwjaar): bij 26 molens is er minstens één, bij 4 zijn het alle overschrijders. Verder zijn alleen de zones uit de WMS gebruikt; afwijkende regels voor een deel van de zone (bijvoorbeeld een lagere maximale bouwhoogte uit een andere bestemming) zijn niet meegenomen. Kolommen: *Normtoets …* in de CSV; op de kaart staan overschrijdende gebouwen rood omlijnd.
+
+**Wat ontbreekt:** omgevingsplannen onder de Omgevingswet (vanaf 2024). Die staan niet in de PDOK-plannenlaag en ook niet in de API Ruimtelijke Plannen; ze zijn alleen via de DSO-API ("Omgevingsdocumenten presenteren") op te vragen, met een eigen sleutel. De sleutel voor Ruimtelijke Plannen werkt daar niet voor. `DSO_API_KEY` is nog niet ingesteld; de MCP-tool voor DSO geeft bovendien alleen documentmetadata. Zodra er een DSO-sleutel is, kan die bron dezelfde velden vullen voor de molens met status *Onbekend*.
+
 ## Scripts (in volgorde)
 1. `scripts/fetch_rce.py`: SPARQL op het RCE CHO-endpoint, schrijft `data/rce_raw.json`.
 2. `scripts/build_biotoop.py`: AHN + BAG via PDOK, schrijft `data/biotoop.json` (cache in `data/cache`, ruim 300 MB, mag weg).
 3. `scripts/fetch_images.py`: RCE-beeldbank (graph `image`), schrijft `data/rce_images.json`.
 4. `scripts/build_erf.py`: percelen, gebouwen en erf, schrijft `data/erf.json` en `site/data/erf/*.json`.
-5. `scripts/build_dataset.py`: tekstherkenning, gezichten, CSV's en `site/data/*`.
+5. `scripts/fetch_knmi.py`, `scripts/build_wind.py`: KNMI-windrozen en windgewogen biotoop (`data/knmi_windroos.json`, `data/wind.json`).
+6. `scripts/fetch_plannen.py`, `scripts/fetch_plantekst.py` (sleutel nodig), `scripts/build_zones.py`, `scripts/build_norm.py`: formele zones, hun regels en de normtoets (`data/plannen.json`, `data/plantekst.json`, `data/zones.json`, `site/data/zone/*.json`, `site/data/plantekst.json`, `data/norm.json`, `site/data/norm/*.json`).
+7. `scripts/build_dataset.py`: tekstherkenning, gezichten, CSV's en `site/data/*`.
 
 ## Wat is gevuld en waar komt het vandaan
 | Veld | Bron | Gevuld |
