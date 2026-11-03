@@ -45,6 +45,15 @@ for root in ROOTS:
     for r in sparql(f"""SELECT DISTINCT ?c ?l WHERE {{
       GRAPH <{TERM}thesaurus> {{ ?c skos:broader* <{TERM}{root}> . ?c skos:prefLabel ?l }} }}""", "thesaurus"):
         concepten[r["c"]] = r["l"]
+# Bijbehorende functies (geen molen zelf): molenaarswoning, molenaarshuis, roedenloods, ...
+ANC_IN = {TERM + x for x in ("a4de54e7-a3a6-43aa-ba2c-543f1a124a04",   # Molenaarswoning(M), onder Industrie- en poldermolen
+                              "b1504243-3b50-4657-a040-741242c2d40e",   # Molenaarshuis
+                              "82659c9d-356f-4d04-b813-053af9fdaa64")}  # Roedenloods
+EXTRA = {TERM + x for x in ("a6337da5-873e-489d-a2df-4db31b719bf4",    # Molenaarswoning(K), buiten de molen-tak
+                             "f1be4411-59f2-4648-b8b4-3c4b79010df7",    # Zaagmolen, buiten de molen-tak
+                             "201130ca-bd97-4d90-adfd-b1aeb0381149")}   # Meelfabriek, buiten de molen-tak
+for r in sparql(f"""SELECT ?c ?l WHERE {{ GRAPH <{TERM}thesaurus> {{ VALUES ?c {{ {" ".join(f"<{c}>" for c in EXTRA)} }} ?c skos:prefLabel ?l }} }}""", "extra functies"):
+    concepten[r["c"]] = r["l"]
 print("functieconcepten:", len(concepten), file=sys.stderr)
 
 mills = sparql(f"""
@@ -61,8 +70,10 @@ recs = {}
 for r in mills:
     d = recs.setdefault(r["rm"], {"uri": r["rm"], "rijksmonumentnummer": r["nr"], "functies": []})
     d["functies"].append(concepten[r["c"]])
+ANC_LABELS = {concepten[c] for c in ANC_IN | EXTRA if c in concepten}
 for d in recs.values():
     d["functies"] = sorted(set(d["functies"]))
+    d["categorie"] = "Molen" if any(f not in ANC_LABELS for f in d["functies"]) else "Molengerelateerd"
 uris = sorted(recs)
 print("unieke molens:", len(uris), file=sys.stderr)
 

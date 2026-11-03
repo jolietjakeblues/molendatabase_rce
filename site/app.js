@@ -17,9 +17,10 @@
     ["Wieksysteem:", "Omschrijving, zelden vermeld"], ["Vlucht", "Omschrijving, zelden vermeld"],
     ["Erf:", "Omschrijving: alleen 'Ja' als genoemd"], ["Molenbiotoop", "Berekend uit AHN + BAG (zie uitleg)"]
   ];
+  var KLEUR_REL = "#42145F", RELKLEUR = { "zelfde perceel": "#D52B1E", tegenaan: "#D52B1E", "aangrenzend perceel": "#E17000", "ander perceel": "#94A3B8", "de molen zelf": "#000000" };
   var LAATSTE_TPL = "Molenbiotoop: NW";
 
-  var data, rows, filtered = [], map, layer, markers = {}, gezLayer, sortKey = "nr", sortDir = 1, selected = null, vink = {};
+  var erfLayer, data, rows, filtered = [], map, layer, markers = {}, gezLayer, sortKey = "nr", sortDir = 1, selected = null, vink = {};
 
   function key(row, prefix) { for (var k in row) if (k.indexOf(prefix) === 0) return k; return null; }
   function val(row, prefix) { var k = key(row, prefix); return k ? row[k] : ""; }
@@ -36,7 +37,8 @@
     var r = m.row;
     m._o = overall(m);
     m._prov = r["Provincie"]; m._plaats = r["Plaats"]; m._gem = r["Gemeente"];
-    m._type = val(r, "TYPE WINDMOLEN");
+    m._cat = m.categorie || "Molen";
+    m._type = m._cat === "Molen" ? val(r, "TYPE WINDMOLEN") : r["Functie volgens RCE-thesaurus (oorspronkelijk)"];
     m._gez = r["Binnen beschermd stads-/dorpsgezicht (Ja/Nee)"];
     m._jaar = parseInt(r["Jaar bouw"], 10) || null;
     m._zoek = [m.nr, m.naam, r["Plaats"], r["Straat"], r["Gemeente"], r["Omschrijving RCE"]].join(" ").toLowerCase();
@@ -51,8 +53,10 @@
 
   function init(d) {
     data = d; rows = d.molens; rows.forEach(prep);
-    document.getElementById("n-totaal").textContent = rows.length;
-    document.getElementById("n2").textContent = rows.length;
+    var nm = rows.filter(function (m) { return m._cat === "Molen"; }).length;
+    document.getElementById("n-totaal").textContent = nm;
+    document.getElementById("n-rel").textContent = rows.length - nm;
+    document.getElementById("n2").textContent = nm;
     fillSelect("f-provincie", rows.map(function (m) { return m._prov; }));
     fillSelect("f-gemeente", rows.map(function (m) { return m._gem; }));
     fillSelect("f-type", rows.map(function (m) { return m._type; }));
@@ -75,11 +79,11 @@
   }
 
   function bind() {
-    ["q", "f-provincie", "f-gemeente", "f-type", "f-gezicht", "f-bio"].forEach(function (id) {
+    ["q", "f-categorie", "f-provincie", "f-gemeente", "f-type", "f-gezicht", "f-bio"].forEach(function (id) {
       document.getElementById(id).addEventListener("input", apply);
     });
     document.getElementById("reset").addEventListener("click", function () {
-      ["q", "f-provincie", "f-gemeente", "f-type", "f-gezicht", "f-bio"].forEach(function (id) { document.getElementById(id).value = ""; });
+      ["q", "f-categorie", "f-provincie", "f-gemeente", "f-type", "f-gezicht", "f-bio"].forEach(function (id) { document.getElementById(id).value = ""; });
       apply();
     });
     document.getElementById("toggle-gezichten").addEventListener("change", function (e) {
@@ -102,10 +106,10 @@
 
   function apply() {
     var q = document.getElementById("q").value.trim().toLowerCase(),
-      p = document.getElementById("f-provincie").value, g = document.getElementById("f-gemeente").value, t = document.getElementById("f-type").value,
+      c = document.getElementById("f-categorie").value, p = document.getElementById("f-provincie").value, g = document.getElementById("f-gemeente").value, t = document.getElementById("f-type").value,
       z = document.getElementById("f-gezicht").value, b = document.getElementById("f-bio").value;
     filtered = rows.filter(function (m) {
-      return (!q || m._zoek.indexOf(q) >= 0) && (!p || m._prov === p) && (!g || m._gem === g) && (!t || m._type === t) &&
+      return (!q || m._zoek.indexOf(q) >= 0) && (!c || m._cat === c) && (!p || m._prov === p) && (!g || m._gem === g) && (!t || m._type === t) &&
         (!z || m._gez === z) && (!b || m._o.klasse === b);
     });
     document.getElementById("telling").textContent = filtered.length + " van " + rows.length + " molens";
@@ -149,8 +153,8 @@
   function renderMap() {
     layer.clearLayers(); markers = {};
     filtered.forEach(function (m) {
-      var c = KLEUR[m._o.klasse];
-      var mk = L.circleMarker([m.lat, m.lon], { radius: 7, color: "#10181b", weight: 1, fillColor: c, fillOpacity: 0.92 });
+      var rel = m._cat !== "Molen", c = rel ? KLEUR_REL : KLEUR[m._o.klasse];
+      var mk = L.circleMarker([m.lat, m.lon], { radius: rel ? 6 : 7, color: rel ? "#fff" : "#10181b", weight: rel ? 2 : 1, fillColor: c, fillOpacity: 0.95 });
       mk.bindTooltip(esc(m.naam) + " · " + esc(m._plaats));
       mk.on("click", function () { select(m, false); });
       mk.addTo(layer); markers[m.nr] = mk;
@@ -186,6 +190,50 @@
     });
   }
 
+  function relTag(r) { return '<span class="tag rel-' + (r === "zelfde perceel" || r === "tegenaan" ? "erf" : r === "aangrenzend perceel" ? "adj" : "ver") + '">' + esc(r) + "</span>"; }
+
+  function erfHtml(m) {
+    var e = m.erf; if (!e) return "";
+    var t = e.tel || {}, h = "<strong>Erf en kadastrale percelen</strong>";
+    h += '<dl class="kv"><dt>Perceel molen</dt><dd>' + esc((e.molenpercelen || []).join("; ")) + (e.molenperceel_m2 ? " (" + e.molenperceel_m2 + " m²)" : "") + "</dd>" +
+      "<dt>Gebouwen (BAG)</dt><dd>" + (t.tegenaan || 0) + " tegenaan · " + (t["zelfde perceel"] || 0) + " zelfde perceel · " + (t["aangrenzend perceel"] || 0) + " aangrenzend · " + (t["ander perceel"] || 0) + " ander perceel (binnen 100 m)</dd>" +
+      "<dt>Op het erf</dt><dd>" + (e.woning_op_erf ? "woning" : "geen woning") + ", " + (e.bijgebouwen_op_erf || 0) + " bijgebouw(en)</dd></dl>";
+    if ((e.gerelateerd || []).length) h += "<p>Gerelateerde rijksmonumenten: " + e.gerelateerd.map(function (g) { return esc(g.functies[0]) + " " + g.rijksmonumentnummer + " " + relTag(g.relatie); }).join(", ") + "</p>";
+    if ((e.dichtstbij || []).length) h += '<ul class="erflijst">' + e.dichtstbij.map(function (d) {
+      return "<li>" + d.afstand + " m " + relTag(d.relatie) + " " + esc(d.gebruik) + (d.bouwjaar && d.bouwjaar !== 9999 ? ", " + d.bouwjaar : "") + (d.rijksmonument ? ", rijksmonument " + d.rijksmonument.nr : "") + "</li>";
+    }).join("") + "</ul>";
+    return h;
+  }
+
+  function erfOpKaart(m, pan) {
+    if (erfLayer) { map.removeLayer(erfLayer); erfLayer = null; }
+    if (m._cat !== "Molen" || !m.erf) return;
+    fetch("data/erf/" + m.nr + ".json").then(function (r) { return r.json(); }).then(function (g) {
+      if (selected !== m.nr) return;
+      erfLayer = L.geoJSON(g, {
+        style: function (f) {
+          var p = f.properties;
+          if (p.soort === "perceel") return p.molenperceel ? { color: "#FFB612", weight: 3, fillColor: "#FFB612", fillOpacity: 0.15 } : { color: "#475569", weight: 1, dashArray: "4 3", fill: false };
+          if (p.soort === "pand") return { color: p.rijksmonument ? "#42145F" : "#000", weight: p.rijksmonument ? 3 : 1, fillColor: RELKLEUR[p.relatie] || "#94A3B8", fillOpacity: 0.6 };
+          return { color: "#000", weight: 2, fillColor: "#000", fillOpacity: 0.8 };
+        },
+        pointToLayer: function (f, ll) { return L.circleMarker(ll, { radius: 4, color: "#000", fillColor: "#000", fillOpacity: 1 }); },
+        onEachFeature: function (f, l) {
+          var p = f.properties;
+          if (p.soort === "pand") l.bindTooltip(p.relatie + ", " + p.afstand + " m, " + p.gebruik + (p.bouwjaar && p.bouwjaar !== 9999 ? ", " + p.bouwjaar : "") + (p.rijksmonument ? ", rijksmonument " + p.rijksmonument.nr : ""));
+          else if (p.soort === "perceel") l.bindTooltip("Perceel " + p.perceel + (p.m2 ? " (" + p.m2 + " m²)" : "") + (p.molenperceel ? ", perceel van de molen" : ""));
+        }
+      }).addTo(map);
+      markers[m.nr] && markers[m.nr].bringToFront();
+      var bb = null;
+      erfLayer.eachLayer(function (l) {
+        var so = l.feature && l.feature.properties.soort;
+        if (so === "pand" || so === "molen") { var b2 = l.getBounds ? l.getBounds() : L.latLngBounds([l.getLatLng()]); bb = bb ? bb.extend(b2) : L.latLngBounds(b2.getSouthWest(), b2.getNorthEast()); }
+      });
+      if (bb) map.fitBounds(bb.pad(0.25), { maxZoom: 19 });
+    }).catch(function () {});
+  }
+
   function rose(m) {
     var b = m.biotoop || {}, kl = b.klasse || {}, dom = b.dominant || {}, s = b.score || {};
     var cx = 85, cy = 85, R = 70, out = "";
@@ -215,7 +263,12 @@
     function kv(label, v) { return v === "" || v == null ? "" : "<dt>" + label + "</dt><dd>" + esc(v) + "</dd>"; }
     var adres = [r["Straat"], r["Huisnr."]].filter(Boolean).join(" ");
     var html = "<h3>" + esc(m.naam) + "</h3><p class=\"sub\">Rijksmonument " + m.nr + " · " + esc(adres) + (adres ? ", " : "") + esc(r["Postcode"]) + " " + esc(r["Plaats"]) + " · " + esc(r["Gemeente"]) + "</p>";
-    html += "<strong>Molenbiotoop</strong>" + (b.klasse ? rose(m) : '<p class="hint">Nog niet berekend.</p>');
+    if (m._cat === "Molen") {
+      html += "<strong>Molenbiotoop</strong>" + (b.klasse ? rose(m) : '<p class="hint">Nog niet berekend.</p>');
+      html += erfHtml(m);
+    } else {
+      html += '<p class="relnote"><span class="tag rel">Molengerelateerd</span> ' + esc(r["Functie volgens RCE-thesaurus (oorspronkelijk)"]) + ". Geen molen zelf, dus geen biotoop.</p>";
+    }
     html += '<dl class="kv">' +
       kv("Jaar bouw", r["Jaar bouw"] ? r["Jaar bouw"] + (r["Herkomst jaar bouw"] ? " (" + r["Herkomst jaar bouw"] + ")" : "") : "") +
       kv("Type", val(r, "TYPE WINDMOLEN")) + kv("Plaatsing", val(r, "Plaatsing van de molen")) + kv("Functie", val(r, "Functie:")) +
@@ -235,16 +288,17 @@
     if (r["Omschrijving RCE"]) html += '<p class="omschr">' + esc(r["Omschrijving RCE"]) + "</p>";
     html += '<p class="links"><a href="' + esc(r["Monumentenregister"]) + '" target="_blank" rel="noopener">Monumentenregister</a><a href="' + esc(r["Linked data RCE"]) + '" target="_blank" rel="noopener">Linked data RCE</a>' + (r["Zoeklink Nederlandse Molendatabase"] ? '<a href="' + esc(r["Zoeklink Nederlandse Molendatabase"]) + '" target="_blank" rel="noopener">Zoeken in Nederlandse Molendatabase</a>' : "") + "</p>";
     document.getElementById("detail").innerHTML = html;
+    erfOpKaart(m, pan);
     if (markers[m.nr]) markers[m.nr].openTooltip();
   }
 
   function dekking() {
-    var cols = data.kolommen, end = cols.indexOf(LAATSTE_TPL), tpl = cols.slice(0, end + 1), n = rows.length, out = "";
+    var cols = data.kolommen, end = cols.indexOf(LAATSTE_TPL), tpl = cols.slice(0, end + 1), mrows = rows.filter(function (m) { return m._cat === "Molen"; }), n = mrows.length, out = "";
     var seen = {};
     tpl.forEach(function (c) {
       var short = c.split(":")[0].trim(), bron = "Niet in RCE/BAG/AHN; later aan te vullen (bv. Hollandsche Molen, SIM, eigenaar)";
       BRON.forEach(function (b) { if (c.indexOf(b[0]) === 0) bron = b[1]; });
-      var g = rows.filter(function (m) { var v = m.row[c]; return v !== "" && v != null && v !== "Naamloos"; }).length;
+      var g = mrows.filter(function (m) { var v = m.row[c]; return v !== "" && v != null && v !== "Naamloos"; }).length;
       var label = c.length > 60 ? c.split(":")[0].trim() : c;
       if (/^Molenbiotoop|^Erf|^Vang|^Wielen/.test(c)) label = c;
       out += "<tr><td>" + esc(label.trim()) + "</td><td>" + g + " / " + n + '</td><td><span class="barbg"><span class="bar" style="width:' + Math.round(120 * g / n) + 'px"></span></span></td><td>' + esc(bron) + "</td></tr>";

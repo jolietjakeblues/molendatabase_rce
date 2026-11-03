@@ -96,3 +96,9 @@ tbody tr.vink{background:#FFF9E6}
 code{background:var(--vlak);padding:0 4px;border-radius:3px;font-size:.85em}
 .foot{margin-top:40px;padding:18px 0 30px;background:var(--vlak);border-top:4px solid var(--geel);color:var(--muted);font-size:.86rem}
 .leaflet-popup-content{font:14px/1.4 var(--font)}
+.dot.rel{background:#42145F}
+.tag.rel{background:#42145F}
+.tag.rel-erf{background:#D52B1E}.tag.rel-adj{background:#E17000;color:#000}.tag.rel-ver{background:#475569}
+.erflijst{margin:6px 0 12px;padding-left:18px;font-size:.88rem}
+.erflijst li{margin:2px 0}
+.relnote{background:var(--vlak);border-left:4px solid #42145F;padding:8px 10px;margin:8px 0}

@@ -14,7 +14,7 @@
   <div class="wrap">
     <p class="kicker">Eerste opzet · westelijk Nederland</p>
     <h1>Molens</h1>
-    <p class="lead">De rijksmonumentale molens uit het register van de Rijksdienst voor het Cultureel Erfgoed, aangevuld met BAG en AHN. Eerste dataset: <strong id="n-totaal">…</strong> molens in Zuid-Holland. De <em>molenbiotoop</em> is berekend: hoeveel wind houden gebouwen en bomen binnen 400 m tegen, per windrichting.</p>
+    <p class="lead">De rijksmonumentale molens uit het register van de Rijksdienst voor het Cultureel Erfgoed, aangevuld met BAG en AHN. Eerste dataset: <strong id="n-totaal">…</strong> molens in Zuid-Holland, plus <strong id="n-rel">…</strong> bijbehorende monumenten (molenaarswoning, roedenloods e.d.) in een eigen kleur. De <em>molenbiotoop</em> is berekend: hoeveel wind houden gebouwen en bomen binnen 400 m tegen, per windrichting.</p>
     <p class="downloads">
       <a class="btn" href="molens.csv" download>Download alle molens (CSV)</a>
       <a class="btn ghost" href="stads_en_dorpsgezichten.csv" download>CSV stads- en dorpsgezichten</a>
@@ -26,6 +26,9 @@
   <section class="filters" aria-label="Filters">
     <label class="f f-zoek">Zoeken
       <input id="q" type="search" placeholder="Naam, plaats, straat, monumentnummer…">
+    </label>
+    <label class="f">Categorie
+      <select id="f-categorie"><option value="">Alle</option><option value="Molen">Molen</option><option value="Molengerelateerd">Molengerelateerd</option></select>
     </label>
     <label class="f">Provincie
       <select id="f-provincie"><option value="">Alle</option></select>
@@ -62,6 +65,7 @@
         <span><i class="dot matig"></i> matig</span>
         <span><i class="dot slecht"></i> slecht</span>
         <span><i class="dot geen"></i> nog niet berekend</span>
+        <span><i class="dot rel"></i> molengerelateerd monument</span>
         <label class="chk"><input id="toggle-gezichten" type="checkbox" checked> Beschermde stads- en dorpsgezichten</label>
       </div>
     </div>
@@ -95,6 +99,11 @@
         <p class="note">Dit is een indicatie om molens onderling te vergelijken, geen vervanging van een molenbiotoopadvies. De askophoogte is geschat: 90% van het hoogste punt volgens de AHN, met een ondergrens per type (stellingmolen 14 m, grondzeiler 9 m, wip- en standerdmolen 6 m, tjasker 3 m), omdat de AHN hoge dunne molenkoppen mist. De AHN toont de situatie van de laatste opname. Pas de drempels aan in <code>scripts/build_biotoop.py</code>.</p>
       </div>
     </div>
+  </section>
+
+  <section class="uitleg">
+    <h2>Erf en kadastrale percelen</h2>
+    <p>Per molen is bepaald op welk kadastraal perceel (BRK-kadastrale kaart, PDOK) de molen staat en welke BAG-gebouwen binnen 100 m op <strong>hetzelfde perceel</strong>, <strong>tegenaan</strong> (binnen 1 m), op een <strong>aangrenzend perceel</strong> of op een <strong>ander perceel</strong> staan. Een gebouw hoort bij een perceel als minstens de helft van de voetafdruk erop ligt. Het gebruiksdoel komt uit de BAG-verblijfsobjecten; een gebouw zonder verblijfsobject geldt als bijgebouw. Selecteer een molen om percelen en gebouwen op de kaart te zien: geel is het perceel van de molen, rood zijn gebouwen op het erf, oranje op een aangrenzend perceel, paars omlijnd zijn rijksmonumenten.</p>
   </section>
 
   <section>

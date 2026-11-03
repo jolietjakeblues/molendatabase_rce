@@ -1,6 +1,6 @@
 # Molens (eerste opzet)
 
-Eerste dataset: alle 239 rijksmonumentale molens in Zuid-Holland uit de RCE-data, in de veldopzet van `Eerste_opzet_molendatabase_westelijk_Nederland.xlsx`.
+Eerste dataset: 237 rijksmonumentale molens en 6 molengerelateerde monumenten in Zuid-Holland uit de RCE-data, in de veldopzet van `Eerste_opzet_molendatabase_westelijk_Nederland.xlsx`.
 
 ## Uitvoer
 - `site/molens.csv`: puntkomma-gescheiden, UTF-8 met BOM (opent direct in Excel). Kolommen A t/m BU volgen het tabblad *Molendatabase*; daarachter extra kolommen (gezicht, biotoopdetails, herkomst, coördinaten, links).
@@ -18,14 +18,26 @@ npm run deploy       # publiceert naar Cloudflare (eerst inloggen met: npx wrang
 ```
 De data bijwerken: `npm run data` (draait `scripts/build_dataset.py`).
 
-## Hoe de molenselectie werkt
-Rijksmonumenten (juridische status *rijksmonument*) in provincie Zuid-Holland (OWMS) met een **oorspronkelijke functie** onder het concept *Industrie- en poldermolen* of *Molen* in de RCE-thesaurus (`skos:broader*`, 69 concepten). Geen tekstmatching op namen.
+## Hoe de selectie werkt
+Rijksmonumenten (juridische status *rijksmonument*) in provincie Zuid-Holland (OWMS) met een **oorspronkelijke functie** onder het concept *Industrie- en poldermolen* of *Molen* in de RCE-thesaurus (`skos:broader*`). Geen tekstmatching op namen.
+
+Kolom *Categorie*:
+- **Molen** (237): minstens één functie die een molen zelf is.
+- **Molengerelateerd** (6): alleen functies als *Molenaarswoning(M)*, *Roedenloods* (onder de molen-tak) of *Molenaarswoning(K)*, *Zaagmolen*, *Meelfabriek* (erbuiten). Op de kaart paars. Molenspecifieke velden en biotoop zijn bij deze rijen leeg. Zaagmolen komt in Zuid-Holland niet voor als rijksmonument. Meer functies toevoegen kan in `ANC_IN` en `EXTRA` in `scripts/fetch_rce.py`.
+
+## Erf en kadastrale percelen
+`scripts/build_erf.py` bepaalt per molen het kadastrale perceel (BRK kadastrale kaart, PDOK) en classificeert BAG-gebouwen binnen 100 m als **tegenaan** (binnen 1 m), **zelfde perceel**, **aangrenzend perceel** of **ander perceel** (een gebouw hoort bij een perceel als minstens de helft van de voetafdruk erop ligt). Gebruiksdoel komt uit de BAG-verblijfsobjecten; een pand zonder verblijfsobject is een bijgebouw. Nabije panden die zelf rijksmonument zijn worden herkend via de RCE-koppeling en geometrisch. Gerelateerde monumenten (molenaarswoning e.d.) worden aan de molen gekoppeld. Per molen staat een klein GeoJSON-bestand in `site/data/erf/` dat de site bij selectie op de kaart toont.
+
+CSV-kolommen: *Kadastraal perceel molen*, *Perceelgrootte*, de vier tellingen, *Woning op erf*, *Bijgebouwen op erf*, *Dichtstbijzijnde gebouw*, *Gerelateerde rijksmonumenten bij de molen*. De kolom *Erf: Molenaarshuisje* uit de opzet is alleen "Ja" bij bewijs: genoemd in de RCE-omschrijving of een RCE-molenaarswoning op hetzelfde of aangrenzende perceel. De BAG-afgeleide kolommen zijn indicaties.
+
+Beperking: RCE en BAG wijzen soms naar verschillende panden (bijvoorbeeld wanneer molen en molenaarswoning één adres delen); een kleine woning zonder verblijfsobject telt dan als bijgebouw.
 
 ## Scripts (in volgorde)
 1. `scripts/fetch_rce.py`: SPARQL op het RCE CHO-endpoint, schrijft `data/rce_raw.json`.
 2. `scripts/build_biotoop.py`: AHN + BAG via PDOK, schrijft `data/biotoop.json` (cache in `data/cache`, ruim 300 MB, mag weg).
 3. `scripts/fetch_images.py`: RCE-beeldbank (graph `image`), schrijft `data/rce_images.json`.
-4. `scripts/build_dataset.py`: tekstherkenning, gezichten, CSV's en `site/data/*`.
+4. `scripts/build_erf.py`: percelen, gebouwen en erf, schrijft `data/erf.json` en `site/data/erf/*.json`.
+5. `scripts/build_dataset.py`: tekstherkenning, gezichten, CSV's en `site/data/*`.
 
 ## Wat is gevuld en waar komt het vandaan
 | Veld | Bron | Gevuld |

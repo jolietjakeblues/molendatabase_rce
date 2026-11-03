@@ -20,6 +20,8 @@ ROOT = Path(__file__).resolve().parent.parent
 RAW = json.loads((ROOT / "data" / "rce_raw.json").read_text(encoding="utf-8"))
 IMG_F = ROOT / "data" / "rce_images.json"
 IMG = json.loads(IMG_F.read_text(encoding="utf-8")) if IMG_F.exists() else {}
+ERF_F = ROOT / "data" / "erf.json"
+ERFD = {r["rijksmonumentnummer"]: r for r in json.loads(ERF_F.read_text(encoding="utf-8"))} if ERF_F.exists() else {}
 BIO_F = ROOT / "data" / "biotoop.json"
 BIO = {b["rijksmonumentnummer"]: b for b in json.loads(BIO_F.read_text(encoding="utf-8"))} if BIO_F.exists() else {}
 CACHE = ROOT / "data" / "cache"
@@ -121,6 +123,16 @@ def bestemming(t):
         return "geen functie"
     m = re.search(r"functie als ([^.;]{3,50})", t, re.I)
     return m.group(1).strip() if m else ""
+
+
+def erf_tekst(e):
+    """Korte omschrijving van het dichtstbijzijnde gebouw (BAG), met perceelrelatie."""
+    if not e or not e.get("dichtstbij"):
+        return ""
+    d = e["dichtstbij"][0]
+    bj = f', bouwjaar {d["bouwjaar"]}' if d.get("bouwjaar") and d["bouwjaar"] != 9999 else ""
+    rm = f', rijksmonument {d["rijksmonument"]["nr"]}' if d.get("rijksmonument") else ""
+    return f'{d["afstand"]} m, {d["relatie"]}, {d["gebruik"]}{bj}{rm}'
 
 
 def md_link(naam, plaats):
@@ -263,6 +275,10 @@ for m in sorted(RAW["molens"], key=lambda m: int(m["rijksmonumentnummer"])):
 
     # biotoop
     kl = b.get("klasse", {})
+    cat = m.get("categorie", "Molen")
+    e = ERFD.get(nr, {})
+    if e.get("fout"):
+        e = {}
     rd_row = {
         "Monumentnummer": nr, "Naam": naam or "Naamloos", "Jaar bouw": jb or "", "Jaar herbouw": jherb or "", "Brand jaar": jbrand or "",
         "Straat": straat, "Huisnr.": huisnr, "Postcode": pc, "Plaats": plaats, "Gemeente": gemeente, "Provincie": "Zuid-Holland",
@@ -301,6 +317,7 @@ for m in sorted(RAW["molens"], key=lambda m: int(m["rijksmonumentnummer"])):
         rd_row[f"Molenbiotoop: {d}"] = kl.get(d, "")
     # extra kolommen
     rd_row.update({
+        "Categorie": cat,
         "Binnen beschermd stads-/dorpsgezicht (Ja/Nee)": binnen,
         "Beschermd gezicht": "; ".join(dict.fromkeys(gz_namen)),
         "Soort gezicht": "; ".join(dict.fromkeys(gz_soort)),
@@ -314,6 +331,16 @@ for m in sorted(RAW["molens"], key=lambda m: int(m["rijksmonumentnummer"])):
         "Boomkruinen binnen 100 m (aandeel)": b.get("boomdek_100m", ""),
         "Boomkruinen binnen 400 m (aandeel)": b.get("boomdek_400m", ""),
         "Hoogste obstakel binnen 400 m (m)": b.get("hoogste_obstakel_400m", ""),
+        "Kadastraal perceel molen": "; ".join(e.get("molenpercelen", [])),
+        "Perceelgrootte (m2)": e.get("molenperceel_m2", ""),
+        "Gebouwen tegenaan (aantal)": e.get("tel", {}).get("tegenaan", ""),
+        "Gebouwen op zelfde perceel (aantal)": e.get("tel", {}).get("zelfde perceel", ""),
+        "Gebouwen op aangrenzend perceel binnen 100 m (aantal)": e.get("tel", {}).get("aangrenzend perceel", ""),
+        "Gebouwen op ander perceel binnen 100 m (aantal)": e.get("tel", {}).get("ander perceel", ""),
+        "Woning op erf (BAG: woonfunctie op zelfde perceel of tegenaan)": ("Ja" if e.get("woning_op_erf") else "Nee") if e else "",
+        "Bijgebouwen op erf (BAG: zonder woonfunctie, zelfde perceel of tegenaan)": e.get("bijgebouwen_op_erf", ""),
+        "Dichtstbijzijnde gebouw (BAG)": erf_tekst(e),
+        "Gerelateerde rijksmonumenten bij de molen": "; ".join(f'{g["functies"][0]} {g["rijksmonumentnummer"]} ({g["relatie"]})' for g in e.get("gerelateerd", [])),
         "Herkomst jaar bouw": jb_bron, "Herkomst naam": naam_bron, "Herkomst adres": "; ".join(herkomst),
         "Breedtegraad": round(lat, 6), "Lengtegraad": round(lon, 6), "RD x": round(pt.x), "RD y": round(pt.y),
         "Aantal RCE-afbeeldingen": len(IMG.get(nr, [])),
@@ -324,8 +351,15 @@ for m in sorted(RAW["molens"], key=lambda m: int(m["rijksmonumentnummer"])):
         "Monumentenregister": f"https://monumentenregister.cultureelerfgoed.nl/monumenten/{nr}",
         "Linked data RCE": m["uri"],
     })
+    if any(g["relatie"] in ("zelfde perceel", "tegenaan", "aangrenzend perceel") and any("Molenaars" in f for f in g["functies"]) for g in e.get("gerelateerd", [])):
+        rd_row["Erf: Molenaarshuisje"] = "Ja"
+    if cat != "Molen":  # molenspecifieke velden zijn voor bijgebouwen niet van toepassing
+        for k in list(rd_row):
+            if k.startswith(("Aandrijving", "TYPE", "Plaatsing", "Functie:", "Bouwkenmerken", "Romptype", "Versieringen", "Vlucht", "Wieksysteem:", "Erf:", "Molenbiotoop")):
+                rd_row[k] = ""
     rows.append(rd_row)
-    js.append({"nr": nr, "naam": rd_row["Naam"], "lat": round(lat, 6), "lon": round(lon, 6), "row": rd_row,
+    js.append({"nr": nr, "categorie": cat, "erf": ({k: e[k] for k in ("molenpercelen", "molenperceel_m2", "tel", "woning_op_erf", "bijgebouwen_op_erf", "dichtstbij", "gerelateerd")} if e else None),
+               "naam": rd_row["Naam"], "lat": round(lat, 6), "lon": round(lon, 6), "row": rd_row,
                "afbeeldingen": [{k: v for k, v in i.items() if k != "open_licentie"} for i in IMG.get(nr, []) if i["open_licentie"] and i["thumb"]],
                "biotoop": {"score": b.get("score"), "dominant": b.get("dominant"), "klasse": kl}})
 
