@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Molendatabase Zuid-Holland</title>
+<meta name="description" content="Alle rijksmonumentale molens in Zuid-Holland uit de RCE-data, met molenbiotoop per windrichting op basis van BAG en AHN.">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <p class="kicker">Eerste opzet · westelijk Nederland</p>
+    <h1>Molendatabase Zuid-Holland</h1>
+    <p class="lead">Alle <strong id="n-totaal">…</strong> rijksmonumentale molens in Zuid-Holland uit het register van de Rijksdienst voor het Cultureel Erfgoed, aangevuld met BAG en AHN. De <em>molenbiotoop</em> is berekend: hoeveel wind houden gebouwen en bomen binnen 400 m tegen, per windrichting.</p>
+    <p class="downloads">
+      <a class="btn" href="molendatabase_zuid_holland.csv" download>CSV molendatabase</a>
+      <a class="btn ghost" href="stads_en_dorpsgezichten_zuid_holland.csv" download>CSV stads- en dorpsgezichten</a>
+    </p>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="filters" aria-label="Filters">
+    <label class="f f-zoek">Zoeken
+      <input id="q" type="search" placeholder="Naam, plaats, straat, monumentnummer…">
+    </label>
+    <label class="f">Gemeente
+      <select id="f-gemeente"><option value="">Alle</option></select>
+    </label>
+    <label class="f">Type windmolen
+      <select id="f-type"><option value="">Alle</option></select>
+    </label>
+    <label class="f">Beschermd gezicht
+      <select id="f-gezicht"><option value="">Alle</option><option value="Ja">Binnen gezicht</option><option value="Nee">Buiten gezicht</option></select>
+    </label>
+    <label class="f">Molenbiotoop (gemiddeld)
+      <select id="f-bio"><option value="">Alle</option><option>Goed</option><option>Matig</option><option>Slecht</option></select>
+    </label>
+    <button id="reset" class="btn ghost" type="button">Wis filters</button>
+  </section>
+
+  <p id="telling" class="telling" aria-live="polite"></p>
+
+  <section class="split">
+    <div class="mapcol">
+      <div id="map" role="application" aria-label="Kaart met molens"></div>
+      <div class="legend" aria-label="Legenda">
+        <span><i class="dot goed"></i> Biotoop goed</span>
+        <span><i class="dot matig"></i> matig</span>
+        <span><i class="dot slecht"></i> slecht</span>
+        <span><i class="dot geen"></i> nog niet berekend</span>
+        <label class="chk"><input id="toggle-gezichten" type="checkbox" checked> Beschermde stads- en dorpsgezichten</label>
+      </div>
+    </div>
+    <aside id="detail" class="detail" aria-live="polite">
+      <p class="hint">Kies een molen op de kaart of in de lijst.</p>
+    </aside>
+  </section>
+
+  <section>
+    <h2>Lijst</h2>
+    <div class="tablewrap">
+      <table id="tabel">
+        <thead><tr>
+          <th data-k="nr">Mon.nr.</th><th data-k="naam">Naam</th><th data-k="plaats">Plaats</th><th data-k="gemeente">Gemeente</th>
+          <th data-k="jaar">Jaar bouw</th><th data-k="type">Type</th><th data-k="gezicht">Gezicht</th><th data-k="bio">Biotoop</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="uitleg">
+    <h2>Hoe is de molenbiotoop berekend?</h2>
+    <div class="cols">
+      <div>
+        <p>Rond elke molen is een hoogtemodel van 400 m straal gemaakt uit de AHN (oppervlaktemodel min maaiveld). Een BAG-voetafdruk bepaalt of een hoogte een <strong>gebouw</strong> is; hoger dan 2,5 m zonder gebouw geldt als <strong>boom of begroeiing</strong>. De molen zelf telt niet mee.</p>
+        <p>Per windrichting (sector van 45°) kijken we van 12 tot 400 m afstand. Een obstakel met hoogte <em>H</em> op afstand <em>d</em> geeft hinder volgens de vuistregel voor de windschaduw: tot ongeveer 2<em>H</em> hoog en 20<em>H</em> lang. Hinder = 1 − <em>d</em>/(20<em>H</em>) zolang de askop lager ligt dan 2<em>H</em>. Bomen tellen voor 60% mee omdat ze wind deels doorlaten.</p>
+      </div>
+      <div>
+        <p>De score van een richting is het gemiddelde van de zwaarste hinder over negen stralen. <strong>Goed</strong> is minder dan 0,15, <strong>matig</strong> minder dan 0,45, anders <strong>slecht</strong>. De richting is waar de wind <em>vandaan</em> komt.</p>
+        <p class="note">Dit is een indicatie om molens onderling te vergelijken, geen vervanging van een molenbiotoopadvies. De askophoogte is geschat uit het hoogste punt van de romp (AHN, 2 m raster); de AHN toont de situatie van de laatste opname. Pas de drempels aan in <code>scripts/build_biotoop.py</code>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Wat zit erin, wat nog niet?</h2>
+    <p>Per veld uit de opzet van de collega: hoeveel van de <span id="n2"></span> molens zijn gevuld en waar komt het vandaan.</p>
+    <div class="tablewrap"><table id="dekking"><thead><tr><th>Veld</th><th>Gevuld</th><th></th><th>Bron</th></tr></thead><tbody></tbody></table></div>
+  </section>
+</main>
+
+<footer class="foot"><div class="wrap">
+  <p>Bronnen: Rijksmonumentenregister en thesauri (RCE, linked data) · BAG en bestuurlijke gebieden (Kadaster, PDOK) · AHN (Rijkswaterstaat, PDOK) · kaart: BRT-achtergrondkaart (PDOK). Velden die uit omschrijvingstekst zijn afgeleid, kunnen onvolledig zijn; controleer bij gebruik.</p>
+</div></footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
