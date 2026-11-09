@@ -6,7 +6,13 @@
 <meta name="color-scheme" content="light">
 <title>Molens</title>
 <meta name="description" content="Rijksmonumentale molens uit de RCE-data (eerste dataset: Zuid-Holland), met molenbiotoop per windrichting op basis van BAG en AHN.">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<meta name="theme-color" content="#FFB612">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:title" content="Molens">
+<meta property="og:description" content="Rijksmonumentale molens uit de RCE-data (eerste dataset: Zuid-Holland), met molenbiotoop per windrichting op basis van BAG en AHN.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb" crossorigin="anonymous">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -55,7 +61,8 @@
   </section>
 
   <div class="selbar">
-    <p id="telling" class="telling" aria-live="polite"></p>
+    <p id="telling" class="telling" aria-live="polite">Gegevens laden…</p>
+    <noscript><p class="telling">Deze pagina heeft JavaScript nodig voor kaart en lijst. De gegevens zijn ook los te downloaden als CSV via de knoppen bovenaan.</p></noscript>
     <div class="selacties">
       <button id="dl-sel" class="btn" type="button">Download selectie (CSV)</button>
       <button id="wis-vink" class="btn ghost" type="button" hidden>Wis aangevinkte rijen</button>
@@ -142,7 +149,7 @@
   <p>Bronnen: Rijksmonumentenregister en thesauri (RCE, linked data) · BAG en bestuurlijke gebieden (Kadaster, PDOK) · AHN (Rijkswaterstaat, PDOK) · kaart: BRT-achtergrondkaart (PDOK). Velden die uit omschrijvingstekst zijn afgeleid, kunnen onvolledig zijn; controleer bij gebruik.</p>
 </div></footer>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO" crossorigin="anonymous"></script>
 <script src="app.js"></script>
 </body>
 </html>
