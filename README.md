@@ -54,7 +54,12 @@ De sleutel staat in `.env` (zie `.env.example`; `.env` staat in `.gitignore`) of
 
 Lees de uitkomst voorzichtig: de norm geldt voor het **oprichten** van bouwwerken, en bestaande bebouwing mag er vaak overheen. Daarom staat apart hoeveel overschrijdende gebouwen na de plandatum zijn gebouwd (BAG-bouwjaar): bij 26 molens is er minstens één, bij 4 zijn het alle overschrijders. Verder zijn alleen de zones uit de WMS gebruikt; afwijkende regels voor een deel van de zone (bijvoorbeeld een lagere maximale bouwhoogte uit een andere bestemming) zijn niet meegenomen. Kolommen: *Normtoets …* in de CSV; op de kaart staan overschrijdende gebouwen rood omlijnd.
 
-**Wat ontbreekt:** omgevingsplannen onder de Omgevingswet (vanaf 2024). Die staan niet in de PDOK-plannenlaag en ook niet in de API Ruimtelijke Plannen; ze zijn alleen via de DSO-API ("Omgevingsdocumenten presenteren") op te vragen, met een eigen sleutel. De sleutel voor Ruimtelijke Plannen werkt daar niet voor. `DSO_API_KEY` is nog niet ingesteld; de MCP-tool voor DSO geeft bovendien alleen documentmetadata. Zodra er een DSO-sleutel is, kan die bron dezelfde velden vullen voor de molens met status *Onbekend*.
+### Omgevingsplannen (DSO)
+Omgevingsplannen onder de Omgevingswet (vanaf 2024) staan niet in de PDOK-plannenlaag en niet in de API Ruimtelijke Plannen, maar in de DSO-API Omgevingsdocumenten presenteren v8 (eigen sleutel: `DSO_API_KEY` in `.env`; de sleutel voor Ruimtelijke Plannen werkt daar niet voor). De productieserver sloot van 2026-11-07 tot kort daarna alle verbindingen vanaf de ontwikkelcomputer (TLS-fout); op 2026-11-09 werkte hij weer.
+
+`scripts/fetch_dso.py` raadpleegt voor de 25 molens zonder zone in een bestemmingsplan het omgevingsplan en de voorbeschermingsregels op het molenpunt: `POST /regelingen/_zoek` met een punt (RD, `Content-Crs: http://www.opengis.net/def/crs/EPSG/0/28992`) en daarna `POST .../regeltekstannotaties/_zoek` met hetzelfde punt. Gezocht wordt naar "biotoop" of "molen" (als los woord) in de locaties en activiteiten. **Uitkomst: geen enkel omgevingsplan bij deze 25 molens noemt een molenbiotoop;** op de molenlocatie staan alleen gebiedsbrede regels (het ambtsgebied, ongeveer 600 regels per plan). De 4 molens met status *Onbekend* zijn daarmee *Nee* geworden, met herkomst in *Zone: omgevingsplan (DSO) geraadpleegd*.
+
+Beperkingen: de API heeft geen filter op type regeling (je krijgt alle regelingen op een punt en filtert zelf); alleen structuur (locaties, activiteiten) is doorzocht, niet de lopende regeltekst; zones die in een omgevingsplan alleen in vrije tekst voorkomen worden dus gemist. De 212 molens mét zone uit een bestemmingsplan zijn niet in het omgevingsplan nagekeken (bij overgang kan het omgevingsplan de regels anders vormgeven). De MCP-tool voor DSO geeft alleen documentmetadata.
 
 ## Scripts (in volgorde)
 1. `scripts/fetch_rce.py`: SPARQL op het RCE CHO-endpoint, schrijft `data/rce_raw.json`.
@@ -62,7 +67,7 @@ Lees de uitkomst voorzichtig: de norm geldt voor het **oprichten** van bouwwerke
 3. `scripts/fetch_images.py`: RCE-beeldbank (graph `image`), schrijft `data/rce_images.json`.
 4. `scripts/build_erf.py`: percelen, gebouwen en erf, schrijft `data/erf.json` en `site/data/erf/*.json`.
 5. `scripts/fetch_knmi.py`, `scripts/build_wind.py`: KNMI-windrozen en windgewogen biotoop (`data/knmi_windroos.json`, `data/wind.json`).
-6. `scripts/fetch_plannen.py`, `scripts/fetch_plantekst.py` (sleutel nodig), `scripts/build_zones.py`, `scripts/build_norm.py`: formele zones, hun regels en de normtoets (`data/plannen.json`, `data/plantekst.json`, `data/zones.json`, `site/data/zone/*.json`, `site/data/plantekst.json`, `data/norm.json`, `site/data/norm/*.json`).
+6. `scripts/fetch_plannen.py`, `scripts/fetch_plantekst.py` (sleutel nodig), `scripts/fetch_dso.py` (DSO-sleutel nodig), `scripts/build_zones.py`, `scripts/build_norm.py`: formele zones, hun regels en de normtoets (`data/plannen.json`, `data/plantekst.json`, `data/zones.json`, `site/data/zone/*.json`, `site/data/plantekst.json`, `data/norm.json`, `site/data/norm/*.json`).
 7. `scripts/build_dataset.py`: tekstherkenning, gezichten, CSV's en `site/data/*`.
 
 ## Wat is gevuld en waar komt het vandaan

@@ -29,6 +29,8 @@ SITE = ROOT / "site" / "data" / "zone"
 SITE.mkdir(parents=True, exist_ok=True)
 to_ll = Transformer.from_crs(28992, 4326, always_xy=True).transform
 R, N = 400, 400  # zelfde raster als build_biotoop.py (2 m)
+DSO_F = ROOT / "data" / "dso_scan.json"
+DSO = json.loads(DSO_F.read_text(encoding="utf-8")) if DSO_F.exists() else {}
 PT_F = ROOT / "data" / "plantekst.json"
 PT = json.loads(PT_F.read_text(encoding="utf-8")) if PT_F.exists() else {"zones": {}, "teksten": {}}
 GEBRUIKT = {}
@@ -146,8 +148,20 @@ def main():
             })
         else:
             geldend = [pl for pl in p["plannen"]]
-            rec.update({"status": "Nee" if geldend else "Onbekend",
-                        "reden": ("bestemmingsplan zonder molenbiotoopzone op deze plek" if geldend else "geen bestemmingsplan gevonden; mogelijk een omgevingsplan onder de Omgevingswet (DSO)")})
+            dso = DSO.get("molens", {}).get(nr) or {}
+            dso_ok = [pl for pl in dso.get("plannen", []) if "fout" not in pl and pl["type"] == "Omgevingsplan"]
+            dso_hit = any(pl.get("molen_locaties") or pl.get("molen_activiteiten") for pl in dso_ok)
+            if dso_ok:
+                rec["dso"] = {"geraadpleegd": DSO.get("opgehaald"), "omgevingsplannen": [pl["titel"] for pl in dso_ok], "molenzone_gevonden": dso_hit}
+            if dso_ok and not dso_hit:
+                rec.update({"status": "Nee",
+                            "reden": ("geen molenbiotoopzone in het bestemmingsplan" if geldend else "geen bestemmingsplan in de bron") +
+                                     " en ook niet in het omgevingsplan (DSO geraadpleegd: alleen gebiedsbrede regels op deze plek)"})
+            elif dso_hit:
+                rec.update({"status": "Onbekend", "reden": "het omgevingsplan (DSO) noemt een molen of biotoop op deze plek; handmatig nakijken"})
+            else:
+                rec.update({"status": "Nee" if geldend else "Onbekend",
+                            "reden": ("bestemmingsplan zonder molenbiotoopzone op deze plek" if geldend else "geen bestemmingsplan gevonden; omgevingsplan (DSO) niet geraadpleegd")})
         rec["molenaanduidingen"] = [{"naam": z["naam"], "plan_dossier": z.get("dossierid"), "plandatum": z.get("datum")} for z in ma]
         # vergelijking met de berekende biotoop
         b = bio.get(nr)
