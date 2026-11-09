@@ -4,6 +4,8 @@
   "compatibility_date": "2026-11-01",
   // Statische site: alleen assets, geen Worker-code.
   "assets": {
-    "directory": "./site"
+    "directory": "./site",
+    // onbekende adressen krijgen site/404.html met een echte 404-status
+    "not_found_handling": "404-page"
   }
 }

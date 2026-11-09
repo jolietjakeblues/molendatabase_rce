@@ -18,6 +18,8 @@ npm run deploy       # publiceert naar Cloudflare (eerst inloggen met: npx wrang
 ```
 De data bijwerken: `npm run data` (draait `scripts/build_dataset.py`).
 
+Afwerking (zie `site/`): `404.html` wordt door wrangler getoond bij onbekende adressen (`not_found_handling: "404-page"`), `robots.txt` staat alles toe, `favicon.svg`, Open Graph-metadata (zonder afbeelding en zonder `og:url`, omdat het domein nog niet vaststaat), Leaflet met SRI-hash, en `.assetsignore` houdt `.gitignore` uit de upload. **Nog te doen zodra het domein bekend is:** `<link rel="canonical">`, `og:url`, een `sitemap.xml` (met een `Sitemap:`-regel in `robots.txt`) en eventueel een `og:image` (absolute URL).
+
 ## Hoe de selectie werkt
 Rijksmonumenten (juridische status *rijksmonument*) in provincie Zuid-Holland (OWMS) met een **oorspronkelijke functie** onder het concept *Industrie- en poldermolen* of *Molen* in de RCE-thesaurus (`skos:broader*`). Geen tekstmatching op namen.
 

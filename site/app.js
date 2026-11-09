@@ -106,10 +106,13 @@
       renderTable(); updateSel();
     });
     document.querySelectorAll("#tabel th[data-k]").forEach(function (th) {
-      th.addEventListener("click", function () {
+      th.tabIndex = 0; th.setAttribute("aria-sort", "none");
+      var sorteer = function () {
         var k = th.dataset.k; if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = 1; }
         renderTable();
-      });
+      };
+      th.addEventListener("click", sorteer);
+      th.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sorteer(); } });
     });
   }
 
@@ -182,9 +185,16 @@
       jaar: function (m) { return m._jaar || 9999; }, type: function (m) { return (m._type || "zzz").toLowerCase(); },
       gezicht: function (m) { return m._gez; }, zone: function (m) { return m._zone; }, bio: function (m) { return m._o.gem == null ? 9 : m._o.gem; } }[sortKey];
     var list = filtered.slice().sort(function (a, b) { var x = f(a), y = f(b); return (x < y ? -1 : x > y ? 1 : 0) * sortDir; });
+    document.querySelectorAll("#tabel th[data-k]").forEach(function (th) {
+      th.setAttribute("aria-sort", th.dataset.k === sortKey ? (sortDir === 1 ? "ascending" : "descending") : "none");
+    });
     var tb = document.querySelector("#tabel tbody");
+    if (!list.length) {
+      tb.innerHTML = '<tr class="leeg"><td colspan="10">Geen molens gevonden met deze filters. Pas de filters aan of kies "Wis filters".</td></tr>';
+      return;
+    }
     tb.innerHTML = list.map(function (m) {
-      return '<tr data-nr="' + m.nr + '"' + (selected === m.nr ? ' class="sel"' : "") + '><td class="chk"><input type="checkbox" class="vink" aria-label="Selecteer ' + esc(m.naam) + '"' + (vink[m.nr] ? " checked" : "") + "></td><td>" + m.nr + "</td><td>" + esc(m.naam) + "</td><td>" + esc(m._plaats) + "</td><td>" + esc(m._gem) +
+      return '<tr data-nr="' + m.nr + '" tabindex="0"' + (selected === m.nr ? ' class="sel"' : "") + '><td class="chk"><input type="checkbox" class="vink" aria-label="Selecteer ' + esc(m.naam) + '"' + (vink[m.nr] ? " checked" : "") + "></td><td>" + m.nr + "</td><td>" + esc(m.naam) + "</td><td>" + esc(m._plaats) + "</td><td>" + esc(m._gem) +
         "</td><td>" + (m._jaar || "") + "</td><td>" + esc(m._type) + "</td><td>" + esc(m._gez) + "</td><td>" + esc(m._zone) + "</td><td>" +
         (m._o.klasse ? '<span class="tag ' + m._o.klasse + '">' + m._o.klasse + "</span>" : "") + "</td></tr>";
     }).join("");
@@ -195,6 +205,11 @@
       tr.classList.toggle("vink", !!vink[tr.dataset.nr]);
       tr.addEventListener("click", function () {
         var m = rows.find(function (x) { return x.nr === tr.dataset.nr; }); select(m, true);
+      });
+      tr.addEventListener("keydown", function (e) {
+        if ((e.key === "Enter" || e.key === " ") && e.target === tr) {
+          e.preventDefault(); select(rows.find(function (x) { return x.nr === tr.dataset.nr; }), true);
+        }
       });
     });
   }
@@ -366,7 +381,7 @@
     var tr = document.querySelector('#tabel tr[data-nr="' + m.nr + '"]'); if (tr) tr.classList.add("sel");
     function kv(label, v) { return v === "" || v == null ? "" : "<dt>" + label + "</dt><dd>" + esc(v) + "</dd>"; }
     var adres = [r["Straat"], r["Huisnr."]].filter(Boolean).join(" ");
-    var html = "<h3>" + esc(m.naam) + "</h3><p class=\"sub\">Rijksmonument " + m.nr + " · " + esc(adres) + (adres ? ", " : "") + esc(r["Postcode"]) + " " + esc(r["Plaats"]) + " · " + esc(r["Gemeente"]) + "</p>";
+    var html = "<h2>" + esc(m.naam) + "</h2><p class=\"sub\">Rijksmonument " + m.nr + " · " + esc(adres) + (adres ? ", " : "") + esc(r["Postcode"]) + " " + esc(r["Plaats"]) + " · " + esc(r["Gemeente"]) + "</p>";
     if (m._cat === "Molen") {
       html += "<strong>Molenbiotoop</strong>" + (b.klasse ? rose(m) : '<p class="hint">Nog niet berekend.</p>');
       html += windHtml(m);
@@ -413,7 +428,7 @@
     document.querySelector("#dekking tbody").innerHTML = out;
   }
 
-  fetch("data/molens.json").then(function (r) { return r.json(); }).then(init).catch(function (e) {
-    document.getElementById("telling").textContent = "Data laden mislukt: " + e;
+  fetch("data/molens.json").then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }).then(init).catch(function (e) {
+    document.getElementById("telling").textContent = "De gegevens konden niet worden geladen (" + e.message + "). Ververs de pagina of probeer het later opnieuw.";
   });
 })();

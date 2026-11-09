@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Voeg hier een Sitemap-regel toe zodra het definitieve domein bekend is, bijvoorbeeld:
+# Sitemap: https://<domein>/sitemap.xml
