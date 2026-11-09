@@ -40,7 +40,7 @@
       <select id="f-type"><option value="">Alle</option></select>
     </label>
     <label class="f">Formele zone (plan)
-      <select id="f-zone"><option value="">Alle</option><option value="Ja">Ja</option><option value="Nee">Nee</option><option value="Onbekend">Onbekend</option></select>
+      <select id="f-zone"><option value="">Alle</option><option value="Ja">Ja</option><option value="Nee">Nee</option></select>
     </label>
     <label class="f">Normtoets (hoogte)
       <select id="f-norm"><option value="">Alle</option><option>Voldoet</option><option>Afhankelijk van wiekhoogte</option><option>Overschrijding</option><option>Niet getoetst</option></select>
@@ -118,7 +118,12 @@
 
   <section class="uitleg">
     <h2>Formele molenbiotoopzone</h2>
-    <p>Uit de bestemmingsplannen (PDOK Ruimtelijke Plannen) is per molen opgehaald of er een vigerende <strong>vrijwaringszone - molenbiotoop</strong> geldt, met straal, plan, status, datum en een link naar de plantekst. De zone staat op de kaart als blauw gestippeld vlak. Omgevingsplannen onder de Omgevingswet staan niet in deze bron; daar staat dan "Onbekend" of "Nee". De vergelijking met de berekende biotoop is een indicatie: er is gekeken naar gebouwen en hoge objecten (≥ 3 m) in de zone, niet naar de regels uit de plantekst.</p>
+    <p>Uit de bestemmingsplannen (PDOK Ruimtelijke Plannen) is per molen opgehaald of er een vigerende <strong>vrijwaringszone - molenbiotoop</strong> geldt, met straal, plan, status, datum en een link naar de plantekst. De zone staat op de kaart als blauw gestippeld vlak, en de regeltekst van het plan staat per zone onder <em>Regels uit het plan</em> (API Ruimtelijke Plannen). Voor de molens zonder zone in een bestemmingsplan is ook het omgevingsplan onder de Omgevingswet geraadpleegd (DSO, 9 november 2026): daar noemt geen enkel plan een molenbiotoop op de molenlocatie. Alleen de gestructureerde delen van die plannen (locaties en activiteiten) zijn doorzocht, niet de lopende regeltekst.</p>
+  </section>
+
+  <section class="uitleg">
+    <h2>Normtoets: hoogte volgens het plan</h2>
+    <p>Voor molens met een zone en een herkende norm is getoetst of gebouwen en bomen in de zone aan de hoogteregel voldoen: binnen de straal (meestal 100 m) niet hoger dan de onderste punt van de wiek, daarbuiten tot 400 m maximaal die hoogte plus de afstand × 1/30, 1/50 of 1/100. Hoogtes komen uit de AHN, gebouwen uit de BAG. <strong>De onderste wiekpunt is een aanname per type molen</strong> (grondzeiler 2,5 m, beltmolen 5,5 m, stellingmolen 8 m), daarom wordt met een strenge, midden- en ruime waarde getoetst en staat de uitkomst als <em>Voldoet</em>, <em>Afhankelijk van wiekhoogte</em> of <em>Overschrijding</em>. De norm geldt voor het oprichten van bouwwerken: bestaande gebouwen mogen er vaak overheen, dus een overschrijding is geen overtreding. Bij elke molen staat hoeveel overschrijdende gebouwen na de plandatum zijn gebouwd. Rode omlijning op de kaart: gebouwen boven de norm.</p>
   </section>
 
   <section class="uitleg">

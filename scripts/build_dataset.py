@@ -410,6 +410,7 @@ for m in sorted(RAW["molens"], key=lambda m: int(m["rijksmonumentnummer"])):
         "Zone: hoogste obstakel in zone (m)": zn.get("hoogste_obstakel_m", "") if zn.get("hoogste_obstakel_m") is not None else "",
         "Zone: molenaanduiding in plan": "; ".join(dict.fromkeys(a["naam"] for a in zn.get("molenaanduidingen", []))),
         "Zone: vergelijking met berekende biotoop": zn.get("vergelijking", ""),
+        "Zone: omgevingsplan (DSO) geraadpleegd": (f'{zn["dso"]["geraadpleegd"]}: {"; ".join(dict.fromkeys(zn["dso"]["omgevingsplannen"]))}; molenzone gevonden: ' + ("ja" if zn["dso"]["molenzone_gevonden"] else "nee")) if zn.get("dso") else "",
         "Normtoets (hoogte volgens bestemmingsplan)": nt.get("uitkomst", ""),
         "Normtoets: toegepaste norm": " | ".join(dict.fromkeys(
             f'binnen {q["straal_a"]} m niet hoger dan de onderste wiekpunt' + (f'; {q["straal_a"]}-{q["tot"]} m: + afstand x {q["helling"]}' if q.get("helling") else "") + ("; ook beplanting" if q.get("beplanting") else "")
